@@ -20,6 +20,9 @@ wheels/
 .installed.cfg
 *.egg
 
+# REF files
+REF*
+
 # Virtual Environment
 venv/
 env/
