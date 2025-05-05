@@ -19,8 +19,17 @@ pip install -r requirements.txt
 * Windows 설정에서 마이크 권한이 허용되어 있는지 확인합니다.
 
 ## 실행 방법
+
+### 1. 웹 앱 실행 (Streamlit)
+* Streamlit 기반 웹 앱을 실행하려면 아래 명령어를 사용하세요:
+```bash
+streamlit run app.py
+```
+* 웹 브라우저가 자동으로 열리며, 음성 녹음 및 변환 기능을 사용할 수 있습니다.
+
+### 2. 기존 방식(STT.py 또는 main.py 실행)
 1. `data` 폴더가 자동으로 생성됩니다.
-2. `STT.py`를 실행하면 10초 동안 음성을 녹음합니다.
+2. `STT.py` 또는 `main.py`를 실행하면 10초 동안 음성을 녹음합니다.
 3. 녹음된 음성은 자동으로 텍스트로 변환되어 `data/transcription.txt`에 저장됩니다.
 
 ## 주의사항

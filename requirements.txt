@@ -3,3 +3,4 @@ numpy>=1.26.4
 torch>=2.7.0
 tqdm>=4.66.5
 PyAudio>=0.2.14
+streamlit>=1.37.1
