@@ -1,5 +1,6 @@
 import whisper
 import os
+import re
 
 def transcribe_audio(audio_file, model_name="tiny"):
     """
@@ -35,13 +36,42 @@ def transcribe_audio(audio_file, model_name="tiny"):
             audio_file_str,
             language=None,  # 자동 언어 감지
             task="transcribe",
-            initial_prompt="이 오디오는 한국어로 말하고 있지만 영어 단어가 섞여있을 수 있습니다."
+            initial_prompt="SQL, SELECT, FROM, JOIN, WHERE, INSERT, UPDATE, database, query, UX, wireframe"
         )
         return result["text"]
     except FileNotFoundError:
         return f"오디오 파일을 찾을 수 없습니다. (경로: {audio_file})"
     except Exception as e:
         return f"에러 발생: {str(e)}"
+
+def postprocess_text(text):
+    """
+    텍스트에서 영어 IT 용어 오타 보정 및 대문자화.
+    Args:
+        text (str): Whisper 출력 텍스트
+    Returns:
+        str: 보정된 텍스트
+    """
+    corrections = {
+        "셀렉트": "SELECT",
+        "프롬": "FROM",
+        "조인": "JOIN",
+        "웨얼": "WHERE",
+        "데이타베이스": "database",
+        "쿼리": "query",
+        "유엑스": "UX",
+        "와이어프레임": "wireframe",
+        "인서트": "INSERT",
+        "업데이트": "UPDATE"
+    }
+    for wrong, correct in corrections.items():
+        text = text.replace(wrong, correct)
+    
+    sql_keywords = ["SELECT", "FROM", "JOIN", "WHERE", "INSERT", "UPDATE"]
+    for keyword in sql_keywords:
+        text = re.sub(rf'\b{keyword.lower()}\b', keyword, text, flags=re.IGNORECASE)
+    
+    return text
 
 def save_text(text, output_file="transcription.txt"):
     """
@@ -51,4 +81,4 @@ def save_text(text, output_file="transcription.txt"):
         output_file (str): 출력 파일 경로
     """
     with open(output_file, "w", encoding="utf-8") as f:
-        f.write(text) 
+        f.write(text)
