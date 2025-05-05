@@ -22,7 +22,7 @@ sdist/
 var/
 wheels/
 *.egg-info/
-.installed.cfg
+.installed.c
 *.egg
 
 # IDE 관련 파일
