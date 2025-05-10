@@ -5,16 +5,25 @@ const vscode = require('vscode');
 const MoluCommand = require('./commands/molu');  // 몰?루 관련 명령어 처리
 const DevPostCommand = require('./commands/dev-post');  // 개발 포스트 관련 명령어 처리  
 const GaugeCommand = require('./commands/gauge');       // 게이지 관련 명령어 처리
+const PadletCommand = require('./commands/padlet');     // Padlet 관련 명령어 처리
 
 /**
  * 확장 프로그램이 활성화될 때 호출되는 함수입니다.
  * @param {vscode.ExtensionContext} context - VSCode가 제공하는 확장 프로그램 컨텍스트
  */
 function activate(context) {
+    // 명령어를 만들고 package.json에 반드시 등록해야 함!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    // 명령어를 만들고 package.json에 반드시 등록해야 함!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    // 명령어를 만들고 package.json에 반드시 등록해야 함!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    // 명령어를 만들고 package.json에 반드시 등록해야 함!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    // 명령어를 만들고 package.json에 반드시 등록해야 함!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    // 명령어를 만들고 package.json에 반드시 등록해야 함!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    // 명령어를 만들고 package.json에 반드시 등록해야 함!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     // 각 명령어 클래스의 인스턴스를 생성합니다
     const moluCommand = new MoluCommand();
     const devPostCommand = new DevPostCommand(); 
     const gaugeCommand = new GaugeCommand();
+    const padletCommand = new PadletCommand();
 
     // VSCode 명령어 팔레트에 명령어를 등록합니다
     context.subscriptions.push(
@@ -24,10 +33,13 @@ function activate(context) {
         vscode.commands.registerCommand('kda-extension.dev-post', () => devPostCommand.execute()),
         // 게이지 생성 명령어 등록 
         vscode.commands.registerCommand('kda-extension.create-gauge', () => gaugeCommand.execute()),
+        // Padlet 명령어 등록
+        vscode.commands.registerCommand('kda-extension.padlet', () => padletCommand.execute()),
         // 각 명령어 인스턴스를 구독 목록에 추가하여 자원 관리
         moluCommand,
         devPostCommand,
-        gaugeCommand
+        gaugeCommand,
+        padletCommand
     );
 }
 

@@ -24,19 +24,28 @@
     "commands": [
       {
         "command": "kda-extension.molu",
-        "title": "몰?루 버튼"
+        "title": "몰?루 버튼",
+        "category": "KDA"
       },
       {
         "command": "kda-extension.dev-post",
-        "title": "kda-post"
+        "title": "kda-post",
+        "category": "KDA"
       },
       {
         "command": "kda-extension.show-molu-count",
-        "title": "kda-molu-count"
+        "title": "kda-molu-count",
+        "category": "KDA"
       },
       {
         "command": "kda-extension.create-gauge",
-        "title": "kda-gauge"
+        "title": "kda-gauge",
+        "category": "KDA"
+      },
+      {
+        "command": "kda-extension.padlet",
+        "title": "KDA: Open Padlet",
+        "category": "KDA"
       }
     ]
   },
