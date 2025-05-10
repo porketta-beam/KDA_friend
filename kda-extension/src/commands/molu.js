@@ -13,7 +13,7 @@ class MoluCommand {
      * MoluCommand 생성자
      * 상태 표시줄에 질문 버튼을 생성하고 초기화합니다.
      */
-    constructor() {
+    constructor(moluState) {
         // 상태 표시줄 아이템 생성 (우측 정렬, 우선순위 1)
         this.statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 1);
         this.statusBarItem.text = '$(circle-outline)';  // 초기 아이콘: 빈 원
@@ -22,6 +22,9 @@ class MoluCommand {
         this.statusBarItem.command = 'kda-extension.molu';  // 클릭시 실행할 명령어
         this.statusBarItem.show();                     // 상태 표시줄에 표시
         this.moluTimer = null;                     // 리셋 타이머
+
+        // 자동 질문 상태 관리자 주입
+        this.moluState = moluState;
     }
 
     /**
@@ -58,6 +61,10 @@ class MoluCommand {
         }
     }
 
+    async toggleAutoQuestion() {
+        await this.moluState.toggleAutoQuestion();
+    }
+
     /**
      * 리소스 정리 메서드
      * 상태 표시줄 아이템과 타이머를 정리합니다.
@@ -67,6 +74,7 @@ class MoluCommand {
         if (this.moluTimer) {
             clearTimeout(this.moluTimer);  // 타이머 정리
         }
+        this.moluState.dispose();
     }
 }
 

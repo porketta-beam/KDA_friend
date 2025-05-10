@@ -6,6 +6,7 @@ const MoluCommand = require('./commands/molu');  // 몰?루 관련 명령어 처
 const DevPostCommand = require('./commands/dev-post');  // 개발 포스트 관련 명령어 처리  
 const GaugeCommand = require('./commands/gauge');       // 게이지 관련 명령어 처리
 const PadletCommand = require('./commands/padlet');     // Padlet 관련 명령어 처리
+const MoluState = require('./commands/molu_state');     // 자동 질문 상태 관리
 
 /**
  * 확장 프로그램이 활성화될 때 호출되는 함수입니다.
@@ -20,7 +21,8 @@ function activate(context) {
     // 명령어를 만들고 package.json에 반드시 등록해야 함!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     // 명령어를 만들고 package.json에 반드시 등록해야 함!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     // 각 명령어 클래스의 인스턴스를 생성합니다
-    const moluCommand = new MoluCommand();
+    const moluState = new MoluState();
+    const moluCommand = new MoluCommand(moluState);
     const devPostCommand = new DevPostCommand(); 
     const gaugeCommand = new GaugeCommand();
     const padletCommand = new PadletCommand();
@@ -29,6 +31,8 @@ function activate(context) {
     context.subscriptions.push(
         // 몰?루 버튼 명령어 등록
         vscode.commands.registerCommand('kda-extension.molu', () => moluCommand.execute()),
+        // 몰?루 자동 질문 토글 명령어 등록
+        vscode.commands.registerCommand('kda-extension.molu-toggle', () => moluState.toggleAutoQuestion()),
         // 개발 포스트 명령어 등록
         vscode.commands.registerCommand('kda-extension.dev-post', () => devPostCommand.execute()),
         // 게이지 생성 명령어 등록 
@@ -39,7 +43,8 @@ function activate(context) {
         moluCommand,
         devPostCommand,
         gaugeCommand,
-        padletCommand
+        padletCommand,
+        moluState
     );
 }
 

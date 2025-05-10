@@ -28,13 +28,13 @@
         "category": "KDA"
       },
       {
-        "command": "kda-extension.dev-post",
-        "title": "kda-post",
+        "command": "kda-extension.molu-toggle",
+        "title": "몰?루 자동 질문 토글",
         "category": "KDA"
       },
       {
-        "command": "kda-extension.show-molu-count",
-        "title": "kda-molu-count",
+        "command": "kda-extension.dev-post",
+        "title": "kda-post",
         "category": "KDA"
       },
       {
@@ -44,7 +44,7 @@
       },
       {
         "command": "kda-extension.padlet",
-        "title": "KDA: Open Padlet",
+        "title": "Open Padlet",
         "category": "KDA"
       }
     ]
