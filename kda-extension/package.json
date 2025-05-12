@@ -47,6 +47,14 @@
         "title": "Open Padlet",
         "category": "KDA"
       }
+    ],
+    "keybindings": [
+      {
+        "command": "kda-extension.padlet",
+        "key": "ctrl+shift+k",
+        "mac": "cmd+shift+k",
+        "when": "editorTextFocus"
+      }
     ]
   },
   "scripts": {
