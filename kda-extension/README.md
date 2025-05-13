@@ -23,10 +23,10 @@
 ## 명령어
 
 - `kda-gauge`: 게이지바 표시/숨김
-- `kda-question-count`: 현재 질문 수 확인
+- `kda-post`: 서버에 요청 보내기
 - `몰?루 버튼`: 빠른 질문하기
 - `몰?루 자동 질문 토글`: 자동 질문 기능 켜기/끄기
-- `Open Padlet`: Padlet 협업 공간 열기 (단축키: Ctrl+Shift+K / Mac: Cmd+Shift+K)
+- `Open Padlet`: Padlet 협업 공간 열기 (단축키: Ctrl+; Ctrl+' / Mac: Cmd+; Cmd+')
 
 ## 요구사항
 
@@ -46,7 +46,7 @@
 
 ### 서버에 요청보내는 테스트
 1. 상태바의 녹색 원 아이콘을 클릭합니다.
-2. 또는 명령 팔레트(Ctrl+Shift+P)에서 "dev-question-post" 명령을 실행합니다.
+2. 또는 명령 팔레트(Ctrl+Shift+P)에서 "kda-post" 명령을 실행합니다.
 
 ### 현재 이해도 낮은 학생 수 확인
 1. 명령 팔레트(Ctrl+Shift+P)에서 "dev-question-count" 명령을 실행합니다.
@@ -58,7 +58,7 @@
 - 100% 도달: "강사님 잠깐 쉬었다 할까요...? ㅎㅎ" (머리가 터질 것 같아요)
 
 ### Padlet 통합
-- Ctrl+Shift+K (Mac: Cmd+Shift+K) 단축키로 Padlet 협업 공간을 빠르게 열 수 있습니다.
+- Ctrl+; Ctrl+' (Mac: Cmd+; Cmd+') 단축키로 Padlet 협업 공간을 빠르게 열 수 있습니다.
 - 또는 명령 팔레트에서 "Open Padlet" 명령을 실행합니다.
 
 ## 시스템 요구사항

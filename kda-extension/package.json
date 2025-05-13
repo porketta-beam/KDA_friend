@@ -50,10 +50,10 @@
     ],
     "keybindings": [
       {
-        "command": "kda-extension.padlet",
-        "key": "ctrl+shift+k",
-        "mac": "cmd+shift+k",
-        "when": "editorTextFocus"
+        "command": "kda-extension.padlet", 
+        "key": "ctrl+oem_1 ctrl+oem_7",
+        "mac": "cmd+; cmd+'",
+        "when": "true"
       }
     ]
   },
