@@ -68,3 +68,6 @@
 ## 라이센스
 
 MIT License
+
+
+docs: README.md 명령어 및 단축키 정보 업데이트
