@@ -1,3 +1,7 @@
 import streamlit as st
 
-st.title("")
+def main():
+    st.title("Stock Price App")
+
+if __name__ == "__main__":
+    main()
