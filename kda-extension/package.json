@@ -1,0 +1,75 @@
+{
+  "name": "kda-extension",
+  "displayName": "KDA_extension",
+  "description": "extension for kda",
+  "version": "0.0.4",
+  "publisher": "porketta",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/porketta-beam/KDA_friend"
+  },
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Other",
+    "Education"
+  ],
+  "enabledApiProposals": [],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "main": "./src/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "kda-extension.molu",
+        "title": "몰?루 버튼",
+        "category": "KDA"
+      },
+      {
+        "command": "kda-extension.molu-toggle",
+        "title": "몰?루 자동 질문 토글",
+        "category": "KDA"
+      },
+      {
+        "command": "kda-extension.dev-post",
+        "title": "kda-post",
+        "category": "KDA"
+      },
+      {
+        "command": "kda-extension.create-gauge",
+        "title": "kda-gauge",
+        "category": "KDA"
+      },
+      {
+        "command": "kda-extension.padlet",
+        "title": "Open Padlet",
+        "category": "KDA"
+      }
+    ],
+    "keybindings": [
+      {
+        "command": "kda-extension.padlet", 
+        "key": "ctrl+oem_1 ctrl+oem_7",
+        "mac": "cmd+; cmd+'",
+        "when": "true"
+      }
+    ]
+  },
+  "scripts": {
+    "lint": "eslint .",
+    "pretest": "npm run lint",
+    "test": "vscode-test",
+    "package": "vsce package",
+    "publish": "vsce publish"
+  },
+  "dependencies": {
+    "axios": "^1.8.4"
+  },
+  "devDependencies": {
+    "@vscode/test-cli": "^0.0.10",
+    "@vscode/test-electron": "^2.4.1",
+    "eslint": "^9.23.0"
+  }
+}

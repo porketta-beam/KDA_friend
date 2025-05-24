@@ -1,0 +1,191 @@
+const vscode = require('vscode');
+const axios = require('axios');
+
+const BASE_URL = 'http://54.180.117.184:8000';
+const GAUGE_UPDATE_INTERVAL = 1000; // 1초
+const RESET_TIME = 10000; // 10초
+
+// 전역 변수로 게이지바 관련 변수들을 선언
+let gaugeBarItem = null;
+let gaugeUpdateInterval = null;
+let currentQuestionCount = 0;
+let previousValue = 0;
+let message50Shown = false;
+let message75Shown = false;
+let message100Shown = false;
+
+// 메시지 표시 함수
+async function showMessages(messages, type = 'info') {
+    for (let i = messages.length - 1; i >= 0; i--) {
+        if (type === 'warning') {
+            await vscode.window.showWarningMessage(messages[i]);
+        } else {
+            await vscode.window.showInformationMessage(messages[i]);
+        }
+        await new Promise(resolve => setTimeout(resolve, 500));
+    }
+}
+
+// 게이지바 생성 함수
+function createGaugeBar() {
+    if (gaugeBarItem) {
+        gaugeBarItem.dispose();
+        gaugeBarItem = null;
+    }
+
+    gaugeBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 10000);
+    gaugeBarItem.text = '$(loading~spin)';
+    gaugeBarItem.show();
+
+    // 게이지바 업데이트 시작
+    if (gaugeUpdateInterval) {
+        clearInterval(gaugeUpdateInterval);
+    }
+    gaugeUpdateInterval = setInterval(updateGauge, GAUGE_UPDATE_INTERVAL);
+    updateGauge();
+
+    return gaugeBarItem;
+}
+
+// 게이지바 업데이트 함수
+async function updateGauge() {
+    try {
+        const response = await axios.get(`${BASE_URL}/get_question`);
+        const value = Number(response.data.current_count);
+        
+        if (isNaN(value)) {
+            gaugeBarItem.text = '데이터 오류';
+            return;
+        }
+
+        currentQuestionCount = value;
+        const normalizedValue = Math.min(Math.max(value / 37, 0), 1);
+        const filledBlocks = Math.floor(normalizedValue * 20);
+        const emptyBlocks = 20 - filledBlocks;
+        gaugeBarItem.text = `${filledBlocks > 0 ? '█'.repeat(filledBlocks) : ''}${emptyBlocks > 0 ? '░'.repeat(emptyBlocks) : ''}`;
+        gaugeBarItem.color = '#E74C3C'; // 자연스러운 빨간색으로 설정
+
+        // 메시지 표시 로직
+        if (normalizedValue >= 1 && value > previousValue && !message100Shown) {
+            await showMessages([
+                '🚨 강사님! 🚨',
+                '머리가 터질 것 같아요...',
+                '잠깐 쉬었다 할까요...? ㅎㅎ'
+            ], 'warning');
+            message100Shown = true;
+        }
+        else if (normalizedValue > 0.75 && value > previousValue && !message75Shown) {
+            await showMessages([
+                '😭 강사님 살려주세요... 😭',
+                '여기만 넘어가면 잘 할 수 있을 것 같아요 ㅠㅠ',
+                '현재 잘 모르겠는 학생 : ' + value + '명'
+            ], 'warning');
+            message75Shown = true;
+        }
+        else if (normalizedValue > 0.5 && value > previousValue && !message50Shown) {
+            await showMessages([
+                '💡 강사님 조금 버거워요... 💡',
+                '한 번만 다시 설명해 주시면 이해될 것 같아요!'
+            ]);
+            message50Shown = true;
+        }
+
+        previousValue = value;
+    } catch {
+        gaugeBarItem.text = '게이지 업데이트 실패';
+    }
+}
+
+function activate(context) {
+    // 오른쪽 상태바 버튼 생성
+    let statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 1);
+    statusBarItem.text = '$(circle-outline)';
+    statusBarItem.color = '#00FF00';
+    statusBarItem.tooltip = '몰?루';
+    statusBarItem.command = 'kda-extension.question';
+    statusBarItem.show();
+
+    // 타이머 변수
+    let questionTimer = null;
+
+    // 질문하기 명령 등록
+    let disposable = vscode.commands.registerCommand('kda-extension.question', async () => {
+        try {
+            if (statusBarItem.text === '$(question)') {
+                vscode.window.showInformationMessage('?');
+                return;
+            }
+
+            await axios.post(`${BASE_URL}/add_question`);
+            
+            statusBarItem.text = '$(question)';
+            statusBarItem.color = '#FFFF00';
+            
+            if (questionTimer) {
+                clearTimeout(questionTimer);
+            }
+            questionTimer = setTimeout(() => {
+                statusBarItem.text = '$(circle-outline)';
+                statusBarItem.color = '#00FF00';
+            }, RESET_TIME);
+        } catch {
+            vscode.window.showErrorMessage('오류발생.. slack으로 문의 바람');
+        }
+    });
+
+    // 개발용 무제한 post 요청 명령 등록
+    let devDisposable = vscode.commands.registerCommand('kda-extension.dev-post', async () => {
+        try {
+            await axios.post(`${BASE_URL}/add_question`);
+            vscode.window.showInformationMessage('개발용 post 요청 성공');
+        } catch {
+            vscode.window.showErrorMessage('오류발생.. slack으로 문의 바람');
+        }
+    });
+
+    // 현재 질문 수 확인 명령 등록
+    let showCountDisposable = vscode.commands.registerCommand('kda-extension.show-question-count', () => {
+        vscode.window.showInformationMessage(`현재 질문 수: ${currentQuestionCount}개`);
+    });
+
+    // 게이지바 생성 명령 등록
+    let createGaugeDisposable = vscode.commands.registerCommand('kda-extension.create-gauge', () => {
+        if (!gaugeBarItem) {
+            createGaugeBar();
+            vscode.window.showInformationMessage('게이지바가 표시되었습니다.');
+        } else {
+            // 게이지바가 이미 존재하는 경우 제거
+            gaugeBarItem.dispose();
+            gaugeBarItem = null;
+            if (gaugeUpdateInterval) {
+                clearInterval(gaugeUpdateInterval);
+                gaugeUpdateInterval = null;
+            }
+            vscode.window.showInformationMessage('게이지바가 숨겨졌습니다.');
+        }
+    });
+
+    // context에 등록
+    context.subscriptions.push(
+        statusBarItem,
+        gaugeBarItem,
+        disposable,
+        showCountDisposable,
+        devDisposable,
+        createGaugeDisposable
+    );
+}
+
+function deactivate() {
+    if (gaugeBarItem) {
+        gaugeBarItem.dispose();
+    }
+    if (gaugeUpdateInterval) {
+        clearInterval(gaugeUpdateInterval);
+    }
+}
+
+module.exports = {
+    activate,
+    deactivate
+};
