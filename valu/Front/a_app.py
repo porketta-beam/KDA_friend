@@ -10,7 +10,6 @@ def main():
     initial_sidebar_state="auto",
     )
     render_sidebar_content()
-    
     render_main_content()
     
 
