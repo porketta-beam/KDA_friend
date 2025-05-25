@@ -591,4 +591,508 @@ class IndicatorProcessor:
         return df
     
     def process_all_tickers(self):
+        """모든 티커의 지표 계산 및 저장"""
+        tickers = self.get_ticker_list()
+        print(f"Processing {len(tickers)} tickers...")
         
+        for i, ticker in enumerate(tickers, 1):
+            try:
+                print(f"[{i}/{len(tickers)}] Processing {ticker}...")
+                indicators_df = self.calculate_all_indicators(ticker)
+                
+                if not indicators_df.empty:
+                    # feather 형식으로 저장
+                    output_file = self.output_path / f"{ticker}_indicators.feather"
+                    indicators_df.reset_index().to_feather(output_file)
+                    print(f"  → Saved {ticker}_indicators.feather")
+                else:
+                    print(f"  → No data for {ticker}")
+                    
+            except Exception as e:
+                print(f"  → Error processing {ticker}: {e}")
+                
+        print("All tickers processed!")
+    
+    def load_ticker_indicators(self, ticker: str) -> pd.DataFrame:
+        """특정 티커의 저장된 지표 로드"""
+        file_path = self.output_path / f"{ticker}_indicators.feather"
+        if file_path.exists():
+            df = pd.read_feather(file_path)
+            df.set_index('Date', inplace=True)
+            return df
+        return pd.DataFrame()
+
+class ModularScreeningStrategy:
+    """
+    모듈식 스크리닝 전략 클래스
+    각 전략은 독립적으로 실행 가능하며 결합도 가능
+    """
+    
+    def __init__(self, indicator_processor: IndicatorProcessor):
+        self.processor = indicator_processor
+        
+    # ===== Benjamin Graham 전략 =====
+    def graham_defensive_screen(self, indicators_df: pd.DataFrame, date: str) -> bool:
+        """
+        그레이엄의 방어적 투자자 스크린
+        """
+        try:
+            row = indicators_df.loc[date]
+            
+            # 1. 시가총액 >= 2억 달러
+            if pd.isna(row['market_cap']) or row['market_cap'] < 200_000_000:
+                return False
+                
+            # 2. P/B < 1.5
+            if pd.isna(row['pb_ratio']) or row['pb_ratio'] >= 1.5:
+                return False
+                
+            # 3. P/E < 15
+            if pd.isna(row['pe_ratio']) or row['pe_ratio'] >= 15:
+                return False
+                
+            # 4. 배당수익률 > 2%
+            if pd.isna(row['dividend_yield']) or row['dividend_yield'] < 2:
+                return False
+                
+            # 5. 유동비율 > 2
+            if pd.isna(row['current_ratio']) or row['current_ratio'] < 2:
+                return False
+                
+            # 6. 부채비율 < 50%
+            if pd.isna(row['debt_ratio']) or row['debt_ratio'] >= 50:
+                return False
+                
+            # 7. 이자보상배율 > 2.5
+            if pd.isna(row['icr']) or row['icr'] < 2.5:
+                return False
+                
+            # 8. EPS 5년 CAGR > 3%
+            if pd.isna(row['eps_cagr_5y']) or row['eps_cagr_5y'] < 3:
+                return False
+                
+            return True
+            
+        except (KeyError, IndexError):
+            return False
+    
+    def graham_enterprising_screen(self, indicators_df: pd.DataFrame, date: str) -> bool:
+        """
+        그레이엄의 적극적 투자자 스크린 (NCAV 포함)
+        """
+        try:
+            row = indicators_df.loc[date]
+            
+            # 1. NCAV/시가총액 > 0.66 (Net Current Asset Value)
+            if pd.isna(row['ncav_ratio']) or row['ncav_ratio'] < 0.66:
+                return False
+                
+            # 2. P/E < 10
+            if pd.isna(row['pe_ratio']) or row['pe_ratio'] >= 10:
+                return False
+                
+            # 3. P/B < 1.2
+            if pd.isna(row['pb_ratio']) or row['pb_ratio'] >= 1.2:
+                return False
+                
+            # 4. 부채비율 < 30%
+            if pd.isna(row['debt_ratio']) or row['debt_ratio'] >= 30:
+                return False
+                
+            # 5. 유동비율 > 1.5
+            if pd.isna(row['current_ratio']) or row['current_ratio'] < 1.5:
+                return False
+                
+            return True
+            
+        except (KeyError, IndexError):
+            return False
+    
+    # ===== Ken Fisher 전략 =====
+    def fisher_psr_screen(self, indicators_df: pd.DataFrame, date: str) -> bool:
+        """
+        Ken Fisher의 Price-to-Sales 전략
+        """
+        try:
+            row = indicators_df.loc[date]
+            
+            # 1. PSR < 0.75
+            if pd.isna(row['psr']) or row['psr'] >= 0.75:
+                return False
+                
+            # 2. 시가총액 >= 1억 달러
+            if pd.isna(row['market_cap']) or row['market_cap'] < 100_000_000:
+                return False
+                
+            # 3. FCF 수익률 > 5%
+            if pd.isna(row['fcf_yield']) or row['fcf_yield'] < 5:
+                return False
+                
+            # 4. 5년 매출 CAGR > 5%
+            if pd.isna(row['sales_cagr_5y']) or row['sales_cagr_5y'] < 5:
+                return False
+                
+            # 5. 3년 FCF CAGR > 10%
+            if pd.isna(row['fcf_cagr_3y']) or row['fcf_cagr_3y'] < 10:
+                return False
+                
+            # 6. ROE > 15%
+            if pd.isna(row['roe']) or row['roe'] < 15:
+                return False
+                
+            # 7. Debt-to-Equity < 50%
+            if pd.isna(row['debt_to_equity']) or row['debt_to_equity'] >= 50:
+                return False
+                
+            return True
+            
+        except (KeyError, IndexError):
+            return False
+    
+    # ===== Mark Minervini 전략 =====
+    def minervini_template_screen(self, indicators_df: pd.DataFrame, date: str) -> bool:
+        """
+        Mark Minervini의 Trend Template
+        """
+        try:
+            row = indicators_df.loc[date]
+            
+            # 1. 현재가 > 150일 이동평균 > 200일 이동평균
+            if (pd.isna(row['ma_150']) or pd.isna(row['ma_200']) or 
+                row['close_price'] <= row['ma_150'] or row['ma_150'] <= row['ma_200']):
+                return False
+                
+            # 2. 150일 이동평균이 상승 추세 (단순화: 현재 MA150 > 10일 전 MA150)
+            # 실제로는 과거 데이터와 비교해야 함
+            
+            # 3. 200일 이동평균이 상승 추세
+            # 실제로는 과거 데이터와 비교해야 함
+            
+            # 4. 50일 이동평균 > 150일, 200일 이동평균
+            if (pd.isna(row['ma_50']) or 
+                row['ma_50'] <= row['ma_150'] or row['ma_50'] <= row['ma_200']):
+                return False
+                
+            # 5. 현재가가 52주 최고가의 75% 이상
+            if pd.isna(row['price_vs_high_52w']) or row['price_vs_high_52w'] < 0.75:
+                return False
+                
+            # 6. 현재가가 52주 최저가의 25% 이상 상승
+            if pd.isna(row['price_vs_low_52w']) or row['price_vs_low_52w'] < 1.25:
+                return False
+                
+            # 7. 연간 매출 성장률 > 25%
+            if pd.isna(row['annual_sales_growth']) or row['annual_sales_growth'] < 25:
+                return False
+                
+            # 8. 연간 EPS 성장률 > 25%
+            if pd.isna(row['annual_eps_growth']) or row['annual_eps_growth'] < 25:
+                return False
+                
+            # 9. 순이익률 > 8%
+            if pd.isna(row['net_margin']) or row['net_margin'] < 8:
+                return False
+                
+            return True
+            
+        except (KeyError, IndexError):
+            return False
+    
+    def minervini_volatility_contraction(self, indicators_df: pd.DataFrame, date: str) -> bool:
+        """
+        Minervini의 변동성 축소 패턴
+        """
+        try:
+            row = indicators_df.loc[date]
+            
+            # 1. 35일간 최고가-최저가 변동폭이 25% 이하
+            if pd.isna(row['range_35d']) or row['range_35d'] > 25:
+                return False
+                
+            # 2. 기본 템플릿 조건들도 만족
+            if not self.minervini_template_screen(indicators_df, date):
+                return False
+                
+            # 3. 거래량이 평균보다 50% 이상 증가 (브레이크아웃 확인)
+            if pd.isna(row['volume_ratio']) or row['volume_ratio'] < 1.5:
+                return False
+                
+            return True
+            
+        except (KeyError, IndexError):
+            return False
+    
+    # ===== 모멘텀 전략 =====
+    def momentum_screen(self, indicators_df: pd.DataFrame, date: str) -> bool:
+        """
+        모멘텀 기반 스크린 (Jegadeesh & Titman 스타일)
+        """
+        try:
+            row = indicators_df.loc[date]
+            
+            # 1. 12개월 리턴 (최근 1개월 제외) > 20%
+            if pd.isna(row['ret_12m_exc1']) or row['ret_12m_exc1'] < 0.20:
+                return False
+                
+            # 2. 6개월 리턴 > 10%
+            if pd.isna(row['ret_6m']) or row['ret_6m'] < 0.10:
+                return False
+                
+            # 3. 현재가 > 200일 이동평균
+            if pd.isna(row['ma_200']) or row['close_price'] <= row['ma_200']:
+                return False
+                
+            # 4. 시가총액 >= 5천만 달러 (유동성 확보)
+            if pd.isna(row['market_cap']) or row['market_cap'] < 50_000_000:
+                return False
+                
+            return True
+            
+        except (KeyError, IndexError):
+            return False
+    
+    # ===== 복합 전략 =====
+    def combined_value_growth_screen(self, indicators_df: pd.DataFrame, date: str) -> bool:
+        """
+        가치+성장 복합 전략
+        """
+        try:
+            row = indicators_df.loc[date]
+            
+            # 가치 조건들
+            # 1. P/E < 20
+            if pd.isna(row['pe_ratio']) or row['pe_ratio'] >= 20:
+                return False
+                
+            # 2. P/B < 3
+            if pd.isna(row['pb_ratio']) or row['pb_ratio'] >= 3:
+                return False
+                
+            # 3. PSR < 2
+            if pd.isna(row['psr']) or row['psr'] >= 2:
+                return False
+                
+            # 성장 조건들
+            # 4. EPS 5년 CAGR > 10%
+            if pd.isna(row['eps_cagr_5y']) or row['eps_cagr_5y'] < 10:
+                return False
+                
+            # 5. 매출 5년 CAGR > 8%
+            if pd.isna(row['sales_cagr_5y']) or row['sales_cagr_5y'] < 8:
+                return False
+                
+            # 6. ROE > 12%
+            if pd.isna(row['roe']) or row['roe'] < 12:
+                return False
+                
+            # 품질 조건들
+            # 7. 부채비율 < 60%
+            if pd.isna(row['debt_ratio']) or row['debt_ratio'] >= 60:
+                return False
+                
+            # 8. 유동비율 > 1.2
+            if pd.isna(row['current_ratio']) or row['current_ratio'] < 1.2:
+                return False
+                
+            return True
+            
+        except (KeyError, IndexError):
+            return False
+    
+    def screen_ticker(self, ticker: str, date: str, strategies: List[str] = None) -> Dict[str, bool]:
+        """
+        특정 티커에 대해 선택된 전략들 실행
+        """
+        if strategies is None:
+            strategies = ['graham_defensive', 'graham_enterprising', 'fisher_psr', 
+                         'minervini_template', 'minervini_volatility', 'momentum', 
+                         'combined_value_growth']
+        
+        indicators_df = self.processor.load_ticker_indicators(ticker)
+        if indicators_df.empty or date not in indicators_df.index:
+            return {strategy: False for strategy in strategies}
+        
+        results = {}
+        strategy_map = {
+            'graham_defensive': self.graham_defensive_screen,
+            'graham_enterprising': self.graham_enterprising_screen,
+            'fisher_psr': self.fisher_psr_screen,
+            'minervini_template': self.minervini_template_screen,
+            'minervini_volatility': self.minervini_volatility_contraction,
+            'momentum': self.momentum_screen,
+            'combined_value_growth': self.combined_value_growth_screen
+        }
+        
+        for strategy in strategies:
+            if strategy in strategy_map:
+                results[strategy] = strategy_map[strategy](indicators_df, date)
+            else:
+                results[strategy] = False
+                
+        return results
+
+class PortfolioBacktester:
+    """
+    포트폴리오 백테스트 클래스 (bt 라이브러리 활용)
+    """
+    
+    def __init__(self, screening_strategy: ModularScreeningStrategy):
+        self.screening_strategy = screening_strategy
+        
+    def create_portfolio_weights(self, tickers: List[str], date: str, strategy: str, 
+                                max_positions: int = 20) -> Dict[str, float]:
+        """
+        특정 날짜에 특정 전략으로 포트폴리오 가중치 생성
+        """
+        selected_stocks = []
+        
+        for ticker in tickers:
+            results = self.screening_strategy.screen_ticker(ticker, date, [strategy])
+            if results.get(strategy, False):
+                # 추가 정보 수집 (랭킹용)
+                indicators_df = self.screening_strategy.processor.load_ticker_indicators(ticker)
+                if not indicators_df.empty and date in indicators_df.index:
+                    row = indicators_df.loc[date]
+                    selected_stocks.append({
+                        'ticker': ticker,
+                        'pe_ratio': row.get('pe_ratio', np.nan),
+                        'pb_ratio': row.get('pb_ratio', np.nan),
+                        'market_cap': row.get('market_cap', np.nan)
+                    })
+        
+        if not selected_stocks:
+            return {}
+        
+        # 전략별 랭킹 방식
+        if strategy in ['graham_defensive', 'graham_enterprising']:
+            # P/E 낮은 순으로 정렬
+            selected_stocks.sort(key=lambda x: x['pe_ratio'] if not pd.isna(x['pe_ratio']) else float('inf'))
+        elif strategy == 'fisher_psr':
+            # 시가총액 큰 순으로 정렬
+            selected_stocks.sort(key=lambda x: x['market_cap'] if not pd.isna(x['market_cap']) else 0, reverse=True)
+        else:
+            # 기본적으로 시가총액 큰 순
+            selected_stocks.sort(key=lambda x: x['market_cap'] if not pd.isna(x['market_cap']) else 0, reverse=True)
+        
+        # 상위 max_positions개 선택
+        selected_stocks = selected_stocks[:max_positions]
+        
+        # 동일 가중치
+        weight = 1.0 / len(selected_stocks)
+        return {stock['ticker']: weight for stock in selected_stocks}
+    
+    def backtest_strategy(self, strategy: str, start_date: str, end_date: str, 
+                         rebalance_freq: str = 'M', max_positions: int = 20) -> bt.Backtest:
+        """
+        특정 전략의 백테스트 실행
+        """
+        # 티커 리스트 가져오기
+        tickers = self.screening_strategy.processor.get_ticker_list()
+        
+        # 가격 데이터 로드 (간소화된 버전)
+        price_data = {}
+        for ticker in tickers[:50]:  # 처음 50개만 테스트
+            try:
+                hist_data = FinancialIndicators.load_data(ticker)
+                if hist_data and 'history' in hist_data:
+                    price_data[ticker] = hist_data['history']['Close']
+            except:
+                continue
+        
+        if not price_data:
+            raise ValueError("No price data available")
+        
+        # 가격 데이터프레임 생성
+        prices_df = pd.DataFrame(price_data)
+        prices_df = prices_df.loc[start_date:end_date]
+        
+        # 리밸런싱 알고리즘 정의
+        class StrategyAlgo(bt.Algo):
+            def __init__(self, strategy_name, screening_strategy, max_positions):
+                self.strategy_name = strategy_name
+                self.screening_strategy = screening_strategy
+                self.max_positions = max_positions
+                
+            def __call__(self, target):
+                date = target.now.strftime('%Y-%m-%d')
+                available_tickers = list(target.universe.columns)
+                
+                weights = self.screening_strategy.create_portfolio_weights(
+                    available_tickers, date, self.strategy_name, self.max_positions
+                )
+                
+                target.temp['weights'] = weights
+                return True
+        
+        # 백테스트 전략 구성
+        strategy_algo = StrategyAlgo(strategy, self.screening_strategy, max_positions)
+        
+        bt_strategy = bt.Strategy(
+            strategy,
+            [
+                bt.algos.RunMonthly() if rebalance_freq == 'M' else bt.algos.RunQuarterly(),
+                strategy_algo,
+                bt.algos.WeighTarget(),
+                bt.algos.Rebalance()
+            ]
+        )
+        
+        # 백테스트 실행
+        backtest = bt.Backtest(bt_strategy, prices_df)
+        return backtest
+
+# 사용 예제
+def main():
+    """
+    메인 실행 함수 - 전체 파이프라인 데모
+    """
+    print("=== Modular Graham Strategy System ===")
+    
+    # 1. 지표 프로세서 초기화 및 지표 계산
+    processor = IndicatorProcessor(data_path="./data", output_path="./indicators")
+    
+    # 모든 티커의 지표 계산 (최초 1회만 실행)
+    # processor.process_all_tickers()
+    
+    # 2. 스크리닝 전략 초기화
+    screener = ModularScreeningStrategy(processor)
+    
+    # 3. 특정 티커들에 대한 스크리닝 테스트
+    test_date = "2023-12-31"
+    test_tickers = ["AAPL", "MSFT", "GOOGL", "TSLA", "NVDA"]
+    
+    print(f"\n=== Screening Results for {test_date} ===")
+    for ticker in test_tickers:
+        results = screener.screen_ticker(ticker, test_date)
+        print(f"\n{ticker}:")
+        for strategy, passed in results.items():
+            status = "✓ PASS" if passed else "✗ FAIL"
+            print(f"  {strategy}: {status}")
+    
+    # 4. 백테스트 실행 (옵션)
+    try:
+        backtester = PortfolioBacktester(screener)
+        
+        print(f"\n=== Backtesting Graham Defensive Strategy ===")
+        backtest = backtester.backtest_strategy(
+            strategy="graham_defensive",
+            start_date="2020-01-01",
+            end_date="2023-12-31",
+            rebalance_freq="M",
+            max_positions=15
+        )
+        
+        result = bt.run(backtest)
+        print(f"Final Portfolio Value: ${result.stats.loc['End', 'graham_defensive']:,.2f}")
+        print(f"Total Return: {result.stats.loc['Total Return', 'graham_defensive']:.2%}")
+        print(f"CAGR: {result.stats.loc['CAGR', 'graham_defensive']:.2%}")
+        print(f"Max Drawdown: {result.stats.loc['Max Drawdown', 'graham_defensive']:.2%}")
+        print(f"Sharpe Ratio: {result.stats.loc['Sharpe', 'graham_defensive']:.2f}")
+        
+    except Exception as e:
+        print(f"Backtesting error: {e}")
+    
+    print("\n=== Analysis Complete ===")
+
+if __name__ == "__main__":
+    main()
