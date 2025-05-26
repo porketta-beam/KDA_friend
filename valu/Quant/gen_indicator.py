@@ -1,53 +1,66 @@
+#!/usr/bin/env python3
 import pandas as pd
 from pathlib import Path
-from multiprocessing import Pool, cpu_count
+from concurrent.futures import ProcessPoolExecutor, as_completed
 from data_loader import load_data
-from indicator_calculator import calculate_indicators
+from test_indicator_calculator import calculate_indicators
 
-def process_ticker(ticker_data):
-    ticker, data_path = ticker_data
+
+def process_ticker(ticker: str, data_dir: Path) -> tuple[str, bool]:
+    """
+    Load data for a ticker, calculate indicators, and save the result to a Feather file.
+    Returns a tuple of (ticker, success_flag).
+    """
     try:
-        data = load_data(ticker, data_path)
-        result = calculate_indicators(data)
-        if result is not None:
-            output_path = Path(data_path) / "indicators"
-            output_path.mkdir(parents=True, exist_ok=True)
-            result.to_feather(output_path / f"{ticker}_indicator.feather")
-            print(f"Processed {ticker}")
-            return ticker, True
-        else:
+        df = load_data(ticker, data_dir)
+        indicators = calculate_indicators(df)
+        if indicators is None:
             return ticker, False
+
+        out_dir = data_dir / "indicators"
+        out_dir.mkdir(exist_ok=True)
+        indicators.to_feather(out_dir / f"{ticker}_indicator.feather")
+        return ticker, True
+
     except Exception as e:
         print(f"Error processing {ticker}: {e}")
         return ticker, False
 
-if __name__ == "__main__":
-    # data_path를 현재 실행 중인 .py 파일의 위치를 기준으로 설정
-    data_path = Path(__file__).parent / "src_data"
-    
-    # src_data/ticker_list/tickers.csv 파일에서 티커 리스트 로드
-    ticker_file_path = data_path / "ticker_list" / "tickers.csv"
+
+def load_tickers(ticker_file: Path) -> list[str]:
+    """
+    Read tickers from a CSV file with a 'Ticker' column.
+    Raises KeyError if the column is missing.
+    """
+    df = pd.read_csv(ticker_file)
+    if 'Ticker' not in df.columns:
+        raise KeyError("Missing 'Ticker' column in tickers.csv")
+    return df['Ticker'].astype(str).tolist()
+
+
+def main():
+    base_dir = Path(__file__).parent / "src_data"
+    ticker_file = base_dir / "ticker_list" / "tickers.csv"
+
     try:
-        ticker_df = pd.read_csv(ticker_file_path)
-        if 'Ticker' not in ticker_df.columns:
-            raise ValueError("Error: 'Ticker' column not found in tickers.csv")
-        tickers = ticker_df['Ticker'].tolist()
-        print(f"Loaded {len(tickers)} tickers from {ticker_file_path}")
-    except FileNotFoundError:
-        print(f"Error: {ticker_file_path} not found")
-        tickers = []
+        tickers = load_tickers(ticker_file)
     except Exception as e:
-        print(f"Error loading tickers.csv: {e}")
-        tickers = []
+        print(f"Failed to load tickers: {e}")
+        return
 
-    if not tickers:
-        print("No tickers to process. Exiting.")
-        exit(1)
+    print(f"Loaded {len(tickers)} tickers")
 
-    num_cores = cpu_count()
+    success_count = 0
+    with ProcessPoolExecutor() as executor:
+        futures = {executor.submit(process_ticker, t, base_dir): t for t in tickers}
+        for future in as_completed(futures):
+            ticker, success = future.result()
+            status = "✔" if success else "✖"
+            print(f"{ticker}: {status}")
+            success_count += int(success)
 
-    with Pool(processes=num_cores) as pool:
-        results = pool.map(process_ticker, [(ticker, data_path) for ticker in tickers])
-    
-    success = sum(1 for _, status in results if status)
-    print(f"Successfully processed {success}/{len(tickers)} tickers")
+    print(f"Successfully processed {success_count}/{len(tickers)} tickers")
+
+
+if __name__ == "__main__":
+    main()
