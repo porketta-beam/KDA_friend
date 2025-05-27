@@ -3,7 +3,7 @@ import pandas as pd
 from pathlib import Path
 from concurrent.futures import ProcessPoolExecutor, as_completed
 from data_loader import load_data
-from test_indicator_calculator import calculate_indicators
+from indicator_calculator import calculate_indicators
 
 
 def process_ticker(ticker: str, data_dir: Path) -> tuple[str, bool]:
