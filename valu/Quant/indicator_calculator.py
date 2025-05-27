@@ -1,288 +1,150 @@
+# gpt
+
 import pandas as pd
 import numpy as np
-from datetime import timedelta
 
-def get_quarter_data(df, date, include_previous=False):
-    if df.empty or df.index.empty:
-        return pd.Series(), pd.Series() if include_previous else pd.Series()
-    date = pd.to_datetime(date)
-    valid_dates = df.index[df.index <= date]
-    if valid_dates.empty:
-        closest_date = df.index[0] if not df.index.empty else None
-    else:
-        closest_date = valid_dates[-1]
-    if closest_date is None:
-        return pd.Series(), pd.Series() if include_previous else pd.Series()
-    current_data = df.loc[closest_date]
-    if not include_previous:
-        return current_data
-    previous_dates = df.index[df.index < closest_date]
-    previous_data = df.loc[previous_dates[-1]] if not previous_dates.empty else pd.Series()
-    return current_data, previous_data
 
-def get_closest_annual_data(df, date):
-    if df.empty or df.index.empty:
-        return pd.Series()
-    year = pd.to_datetime(date).year
-    valid_years = df.index[df.index <= f"{year}-12-31"]
-    closest_year = valid_years[-1] if not valid_years.empty else df.index[0]
-    return df.loc[closest_year]
+def calculate_indicators(data: dict) -> pd.DataFrame:
+    """
+    Vectorized calculation of financial and technical indicators.
+    Expects data dict with keys:
+      - history: OHLCV DataFrame indexed by Date
+      - quarterly_balance_sheet, quarterly_financials, quarterly_cash_flow: DataFrames indexed by quarter-end Date
+      - financials, balance_sheet, cash_flow: annual DataFrames indexed by year-end Date
+    """
+    hist = data['history'].sort_index()
+    idx = hist.index
 
-def calculate_indicators(data):
-    if data is None:
-        return None
+    # Forward-fill quarterly series to daily frequency
+    def ffill_quarter(qdf):
+        return qdf.reindex(idx).ffill().bfill()
 
-    result_df = pd.DataFrame(index=data['history'].index)
-    result_df['Close'] = data['history']['Close']
+    bs = data['balance_sheet']
+    fin = data['financials']
+    cf = data['cash_flow']
 
-    # Benjamin Graham 지표
-    result_df['Avg_Daily_Volume'] = data['history']['Volume'].rolling(window=252).mean()
-    shares = data['quarterly_balance_sheet'].get('Ordinary Shares Number', pd.Series([1]))
-    result_df['Market_Cap'] = data['history']['Close'] * shares.reindex(data['history'].index, method='ffill').iloc[:, 0]
+    bs_q = ffill_quarter(data['quarterly_balance_sheet'])
+    fin_q = ffill_quarter(data['quarterly_financials'])
+    cf_q = ffill_quarter(data['quarterly_cash_flow'])
 
-    def calc_ncav(row):
-        balance = get_quarter_data(data['quarterly_balance_sheet'], row.name)[0]
-        current_assets = balance.get('Total Current Assets', 0)
-        total_liabilities = balance.get('Total Liabilities Net Minority Interest', 0)
-        ncav = current_assets - total_liabilities
-        market_cap = row['Market_Cap']
-        return ncav / market_cap if market_cap > 0 else 0
-    result_df['NCAV_to_MarketCap'] = result_df.apply(calc_ncav, axis=1)
+    # TTM sums (4 quarters)
+    fin_ttm = data['quarterly_financials'].rolling(4).sum().rename(columns=lambda c: f"{c}_TTM")
+    fin_ttm = fin_ttm.reindex(idx).ffill().bfill()
+    bs_ttm = data['quarterly_balance_sheet'].rolling(4).sum().rename(columns=lambda c: f"{c}_TTM")
+    bs_ttm = bs_ttm.reindex(idx).ffill().bfill()
+    cf_ttm = data['quarterly_cash_flow'].rolling(4).sum().rename(columns=lambda c: f"{c}_TTM")
+    cf_ttm = cf_ttm.reindex(idx).ffill().bfill()
 
-    def calc_pb(row):
-        balance = get_quarter_data(data['quarterly_balance_sheet'], row.name)[0]
-        book_value = balance.get('Common Stock Equity', 0)
-        market_cap = row['Market_Cap']
-        return market_cap / book_value if book_value > 0 else float('inf')
-    result_df['PB_Ratio'] = result_df.apply(calc_pb, axis=1)
+    # get()의 두 번째 인자는 키가 없을 때 반환할 디폴트값
+    tca = bs_q.get('Total Current Assets', bs_q.get('Current Assets'))
+    if tca is None:
+        raise KeyError("유동자산 컬럼을 찾을 수 없습니다.")
+    
+    tcl = bs_q.get('Total Current Liabilities', bs_q.get('Current Liabilities'))
+    if tca is None:
+        raise KeyError("유동부채 컬럼을 찾을 수 없습니다.")
+    
+    capex_ttm = cf_ttm.get('Capital Expenditures_TTM', cf_ttm.get('Capital Expenditure_TTM'))
+    if tca is None:
+        raise KeyError("총자본적지출 컬럼을 찾을 수 없습니다.")
+    
+    capex = cf.get('Capital Expenditures', cf.get('Capital Expenditure'))
+    if tca is None:
+        raise KeyError("총자본적지출 컬럼을 찾을 수 없습니다.")
+    
+    interest_expense = fin_q['Interest Expense'] if 'Interest Expense' in fin_q.columns \
+                  else fin_q['Interest Income'] - fin_q['Net Interest Income']
+    if interest_expense is None:
+        raise KeyError("이자비용 컬럼을 찾을 수 없습니다.")
 
-    def calc_pe(row):
-        financials = get_quarter_data(data['quarterly_financials'], row.name)[0]
-        net_income_ttm = data['quarterly_financials']['Net Income'][:4].sum() if not data['quarterly_financials'].empty else 0
-        market_cap = row['Market_Cap']
-        return market_cap / net_income_ttm if net_income_ttm > 0 else float('inf')
-    result_df['PE_Ratio'] = result_df.apply(calc_pe, axis=1)
 
-    def calc_dividend_yield(row):
-        dividends_ttm = data['history']['Dividends'][row.name - timedelta(days=365):row.name].sum()
-        close = row['Close']
-        return (dividends_ttm / close) * 100 if close > 0 else 0
-    result_df['Dividend_Yield'] = result_df.apply(calc_dividend_yield, axis=1)
+    # Market cap
+    shares = bs_q['Ordinary Shares Number'].replace(0, np.nan)
+    market_cap = hist['Close'] * shares
 
-    def calc_icr(row):
-        financials = get_quarter_data(data['quarterly_financials'], row.name)[0]
-        ebit = financials.get('EBIT', 0)
-        interest_expense = financials.get('Interest Expense', 1)
-        return ebit / abs(interest_expense) if interest_expense != 0 else float('inf')
-    result_df['ICR'] = result_df.apply(calc_icr, axis=1)
+    # # Build result DataFrame
+    result = pd.DataFrame(index=idx)
+    result['Date'] = idx
+    result['Close'] = hist['Close']
+    result['Avg_Daily_Volume'] = hist['Volume'].rolling(252).mean()
+    result['Market_Cap'] = market_cap
 
-    def calc_debt_ratio(row):
-        balance = get_quarter_data(data['quarterly_balance_sheet'], row.name)[0]
-        total_liabilities = balance.get('Total Liabilities Net Minority Interest', 0)
-        total_assets = balance.get('Total Assets', 1)
-        return (total_liabilities / total_assets) * 100 if total_assets > 0 else 100
-    result_df['Debt_Ratio'] = result_df.apply(calc_debt_ratio, axis=1)
+    # Benjamin Graham
+    result['NCAV_to_MarketCap'] = (tca - bs_q['Total Liabilities Net Minority Interest']) / market_cap
+    result['PB_Ratio'] = market_cap / bs_q['Common Stock Equity']
+    result['PE_Ratio'] = market_cap / fin_ttm['Net Income_TTM']
+    result['Dividend_Yield'] = hist['Dividends'].rolling(252).sum() / hist['Close'] * 100
+    # dps = (cf['Cash Dividends Paid'].abs() / bs['Ordinary Shares Number']).reindex(idx, method='ffill')
+    # result['Dividend_Yield2'] = (dps / hist['Close'] * 100)
+    result['ICR'] = fin_q['EBIT'] / interest_expense.abs()
+    result['Debt_Ratio'] = bs_q['Total Liabilities Net Minority Interest'] / bs_q['Total Assets'] * 100
+    result['Current_Ratio'] = tca / tcl
+    result['Quick_Ratio'] = (tca - bs_q['Inventory']) / tcl
 
-    def calc_current_ratio(row):
-        balance = get_quarter_data(data['quarterly_balance_sheet'], row.name)[0]
-        current_assets = balance.get('Total Current Assets', 0)
-        current_liabilities = balance.get('Total Current Liabilities', 1)
-        return current_assets / current_liabilities if current_liabilities > 0 else 0
-    result_df['Current_Ratio'] = result_df.apply(calc_current_ratio, axis=1)
+    # Profit consistency (annual)
+    annual_income = fin['Net Income']
+    good_years = annual_income.resample('A').sum() > 0
+    consistent = good_years.rolling(5).apply(lambda x: x.all(), raw=True).reindex(idx, method='ffill')
+    result['Profit_Consistency'] = consistent.astype(bool)
 
-    def calc_quick_ratio(row):
-        balance = get_quarter_data(data['quarterly_balance_sheet'], row.name)[0]
-        current_assets = balance.get('Total Current Assets', 0)
-        inventory = balance.get('Inventory', 0)
-        current_liabilities = balance.get('Total Current Liabilities', 1)
-        return (current_assets - inventory) / current_liabilities if current_liabilities > 0 else 0
-    result_df['Quick_Ratio'] = result_df.apply(calc_quick_ratio, axis=1)
+    # EPS CAGR (5 years)
+    annual_eps = (fin['Net Income']/bs['Ordinary Shares Number']).resample('A').last()
+    print(annual_eps)
+    result['EPS'] = annual_eps.reindex(idx, method='ffill')
+    result['EPS_CAGR'] = ((annual_eps.pct_change(3).add(1).pow(1/3).sub(1).mul(100))
+                        .reindex(idx, method='ffill'))
 
-    def calc_profit_consistency(row):
-        financials = data['financials']
-        years = sorted(financials.index.year.unique())[-5:]
-        if len(years) < 5:
-            return False
-        for year in years:
-            net_income = financials.loc[str(year), 'Net Income'] if str(year) in financials.index else 0
-            if net_income <= 0:
-                return False
-        return True
-    result_df['Profit_Consistency'] = result_df.apply(calc_profit_consistency, axis=1)
+    # Ken Fisher
+    result['PSR'] = market_cap / fin_ttm['Total Revenue_TTM']
+    fcf = cf_ttm['Operating Cash Flow_TTM'] - capex_ttm
+    result['FCF_Yield'] = fcf / market_cap * 100
+    revenue = fin['Total Revenue'].resample('A').last()
+    result['Sales_CAGR'] = ((revenue.pct_change(3) + 1) ** (1/3) - 1).mul(100).reindex(idx, method='ffill')
+    fcf_annual = (cf['Operating Cash Flow'] - capex)
+    result['FCF_CAGR'] = ((fcf_annual.resample('A').last().pct_change(3) + 1) ** (1/3) - 1).mul(100).reindex(idx, method='ffill')
+    result['ROE'] = fin_q['Net Income'].rolling(4).sum() / bs_q['Common Stock Equity'] * 100
+    result['Debt_to_Equity'] = bs_q['Total Debt'] / bs_q['Common Stock Equity'] * 100
 
-    def calc_eps_cagr(row):
-        financials = data['financials']
-        balance = data['balance_sheet']
-        years = sorted(financials.index.year.unique())[-5:]
-        if len(years) < 5:
-            return 0
-        eps_values = []
-        for year in years:
-            net_income = financials.loc[str(year), 'Net Income'] if str(year) in financials.index else 0
-            shares = balance.loc[str(year), 'Ordinary Shares Number'] if str(year) in balance.index else 1
-            eps = net_income / shares if shares > 0 else 0
-            eps_values.append(eps)
-        return ((eps_values[-1] / eps_values[0]) ** (1/5) - 1) * 100 if eps_values[0] > 0 else 0
-    result_df['EPS_CAGR'] = result_df.apply(calc_eps_cagr, axis=1)
+    # Returns
+    result['12M_Return_excl_1M'] = hist['Close'].shift(21).pct_change(252) * 100
+    result['6M_Return'] = hist['Close'].pct_change(126) * 100
 
-    # Ken Fisher 지표
-    def calc_psr(row):
-        financials = get_quarter_data(data['quarterly_financials'], row.name)[0]
-        revenue_ttm = data['quarterly_financials']['Total Revenue'][:4].sum() if not data['quarterly_financials'].empty else 0
-        market_cap = row['Market_Cap']
-        return market_cap / revenue_ttm if revenue_ttm > 0 else float('inf')
-    result_df['PSR'] = result_df.apply(calc_psr, axis=1)
+    # Mark Minervini fundamentals
+    annual_revenue = fin['Total Revenue'].resample('A').last()
+    result['Revenue_YoY'] = annual_revenue.pct_change(1).mul(100).reindex(idx, method='ffill')
+    annual_eps = (fin['Net Income'] / bs['Ordinary Shares Number']).resample('A').last()
+    result['EPS_YoY'] = annual_eps.pct_change(1).mul(100).reindex(idx, method='ffill')
+    net_income_ttm = fin_ttm['Net Income_TTM']
+    revenue_ttm    = fin_ttm['Total Revenue_TTM']
+    result['Net_Profit_Margin'] = (net_income_ttm / revenue_ttm * 100).reindex(idx, method='ffill')
 
-    def calc_fcf_yield(row):
-        cashflow = get_quarter_data(data['quarterly_cash_flow'], row.name)[0]
-        op_cashflow_ttm = data['quarterly_cash_flow']['Operating Cash Flow'][:4].sum() if not data['quarterly_cash_flow'].empty else 0
-        capex_ttm = data['quarterly_cash_flow']['Capital Expenditures'][:4].sum() if not data['quarterly_cash_flow'].empty else 0
-        fcf = op_cashflow_ttm - capex_ttm
-        market_cap = row['Market_Cap']
-        return (fcf / market_cap) * 100 if market_cap > 0 else 0
-    result_df['FCF_Yield'] = result_df.apply(calc_fcf_yield, axis=1)
+    # Mark Minervini technicals
+    ma50 = hist['Close'].rolling(50).mean()
+    ma150 = hist['Close'].rolling(150).mean()
+    ma200 = hist['Close'].rolling(200).mean()
+    result['Above_50MA'] = hist['Close'] > ma50
+    result['50MA_Uptrend'] = ma50.diff(30) > 0
+    result['MA_Alignment'] = (ma50 > ma150) & (ma150 > ma200)
+    high_52w = hist['High'].rolling(252).max()
+    low_52w = hist['Low'].rolling(252).min()
+    result['Near_52W_High'] = hist['Close'] >= high_52w * 0.95
+    result['Above_52W_Low'] = hist['Close'] > low_52w * 1.3
+    result['35D_Volatility'] = (hist['High'].rolling(35).max() - hist['Low'].rolling(35).min()) / hist['Low'].rolling(35).min() * 100
+    result['Base_High'] = hist['High'].rolling(180).apply(lambda x: x[-10:].max() == x.max())
 
-    def calc_sales_cagr(row):
-        financials = data['financials']
-        years = sorted(financials.index.year.unique())[-5:]
-        if len(years) < 5:
-            return 0
-        revenues = [financials.loc[str(year), 'Total Revenue'] if str(year) in financials.index else 0 for year in years]
-        return ((revenues[-1] / revenues[0]) ** (1/5) - 1) * 100 if revenues[0] > 0 else 0
-    result_df['Sales_CAGR'] = result_df.apply(calc_sales_cagr, axis=1)
+    # VCP: approximate: price consolidation + volume drop
+    res = hist['Close'].between(hist['Low'].rolling(126).min(), hist['High'].rolling(126).max())
+    result['Base_3_6M'] = res.groupby((~res).cumsum()).cumcount().add(1).ge(63)
+    tr_diff = (hist['High'] - hist['Low']).diff()
+    result['TR_2down'] = tr_diff.lt(0) & tr_diff.shift().lt(0)
+    drawdown_6m = (hist['Close'].rolling(126).max() - hist['Close']) / hist['Close'].rolling(126).max() * 100
+    result['Correction_8_35'] = drawdown_6m.between(8, 35)
+    vol = hist['Volume']
+    base_vol = vol.shift(10).rolling(170).max()
+    recent_vol = vol.shift(1).rolling(10).mean()
+    result['VCP'] = (recent_vol <= base_vol * 0.5)
 
-    def calc_fcf_cagr(row):
-        cashflow = data['cash_flow']
-        years = sorted(cashflow.index.year.unique())[-3:]
-        if len(years) < 3:
-            return 0
-        fcf_values = []
-        for year in years:
-            op_cashflow = cashflow.loc[str(year), 'Operating Cash Flow'] if str(year) in cashflow.index else 0
-            capex = cashflow.loc[str(year), 'Capital Expenditures'] if str(year) in cashflow.index else 0
-            fcf = op_cashflow - capex
-            fcf_values.append(fcf)
-        return ((fcf_values[-1] / fcf_values[0]) ** (1/3) - 1) * 100 if fcf_values[0] > 0 else 0
-    result_df['FCF_CAGR'] = result_df.apply(calc_fcf_cagr, axis=1)
+    # Annualized return for calculate RS
+    result['12M_Return_excl_1W'] = hist['Close'].shift(5).pct_change(252) * 100
 
-    def calc_roe(row):
-        financials = get_quarter_data(data['quarterly_financials'], row.name)[0]
-        balance = get_quarter_data(data['quarterly_balance_sheet'], row.name)[0]
-        net_income_ttm = data['quarterly_financials']['Net Income'][:4].sum() if not data['quarterly_financials'].empty else 0
-        equity = balance.get('Common Stock Equity', 1)
-        return (net_income_ttm / equity) * 100 if equity > 0 else 0
-    result_df['ROE'] = result_df.apply(calc_roe, axis=1)
-
-    def calc_debt_to_equity(row):
-        balance = get_quarter_data(data['quarterly_balance_sheet'], row.name)[0]
-        total_debt = balance.get('Total Debt', 0)
-        equity = balance.get('Common Stock Equity', 1)
-        return (total_debt / equity) * 100 if equity > 0 else 100
-    result_df['Debt_to_Equity'] = result_df.apply(calc_debt_to_equity, axis=1)
-
-    def calc_12m_return(row):
-        past_12m = row.name - timedelta(days=365)
-        past_1m = row.name - timedelta(days=30)
-        close_series = data['history']['Close']
-        close_12m = close_series[close_series.index <= past_12m].iloc[-1] if not close_series.empty else np.nan
-        close_1m = close_series[close_series.index <= past_1m].iloc[-1] if not close_series.empty else np.nan
-        return ((close_1m / close_12m) - 1) * 100 if pd.notna(close_12m) and pd.notna(close_1m) else np.nan
-    result_df['12M_Return'] = result_df.apply(calc_12m_return, axis=1)
-
-    def calc_6m_return(row):
-        past_6m = row.name - timedelta(days=180)
-        close_series = data['history']['Close']
-        close_6m = close_series[close_series.index <= past_6m].iloc[-1] if not close_series.empty else np.nan
-        close = row['Close']
-        return ((close / close_6m) - 1) * 100 if pd.notna(close_6m) else np.nan
-    result_df['6M_Return'] = result_df.apply(calc_6m_return, axis=1)
-
-    # Mark Minervini 지표
-    def calc_annual_sales_growth(row):
-        financials = get_quarter_data(data['quarterly_financials'], row.name)[0]
-        revenue_ttm = data['quarterly_financials']['Total Revenue'][:4].sum() if not data['quarterly_financials'].empty else 0
-        prev_revenue_ttm = data['quarterly_financials']['Total Revenue'][4:8].sum() if len(data['quarterly_financials']) >= 8 else 0
-        return ((revenue_ttm / prev_revenue_ttm) - 1) * 100 if prev_revenue_ttm > 0 else 0
-    result_df['Annual_Sales_Growth'] = result_df.apply(calc_annual_sales_growth, axis=1)
-
-    def calc_annual_eps_growth(row):
-        financials = get_quarter_data(data['quarterly_financials'], row.name)[0]
-        balance = get_quarter_data(data['quarterly_balance_sheet'], row.name)[0]
-        net_income_ttm = data['quarterly_financials']['Net Income'][:4].sum() if not data['quarterly_financials'].empty else 0
-        prev_net_income_ttm = data['quarterly_financials']['Net Income'][4:8].sum() if len(data['quarterly_financials']) >= 8 else 0
-        shares = balance.get('Ordinary Shares Number', 1)
-        eps_ttm = net_income_ttm / shares if shares > 0 else 0
-        prev_eps_ttm = prev_net_income_ttm / shares if shares > 0 else 0
-        return ((eps_ttm / prev_eps_ttm) - 1) * 100 if prev_eps_ttm > 0 else 0
-    result_df['Annual_EPS_Growth'] = result_df.apply(calc_annual_eps_growth, axis=1)
-
-    def calc_net_margin(row):
-        financials = get_quarter_data(data['quarterly_financials'], row.name)[0]
-        net_income_ttm = data['quarterly_financials']['Net Income'][:4].sum() if not data['quarterly_financials'].empty else 0
-        revenue_ttm = data['quarterly_financials']['Total Revenue'][:4].sum() if not data['quarterly_financials'].empty else 1
-        return (net_income_ttm / revenue_ttm) * 100 if revenue_ttm > 0 else 0
-    result_df['Net_Margin'] = result_df.apply(calc_net_margin, axis=1)
-
-    # 분기별 성장률 지표 (Minervini 추가)
-    def calc_quarterly_revenue_growth(row):
-        current_financials, prev_financials = get_quarter_data(data['quarterly_financials'], row.name, include_previous=True)
-        current_revenue = current_financials.get('Total Revenue', 0)
-        prev_revenue = prev_financials.get('Total Revenue', 0)
-        return ((current_revenue / prev_revenue) - 1) * 100 if prev_revenue > 0 else 0
-    result_df['Quarterly_Revenue_Growth'] = result_df.apply(calc_quarterly_revenue_growth, axis=1)
-
-    def calc_quarterly_eps_growth(row):
-        current_financials, prev_financials = get_quarter_data(data['quarterly_financials'], row.name, include_previous=True)
-        balance = get_quarter_data(data['quarterly_balance_sheet'], row.name)[0]
-        current_net_income = current_financials.get('Net Income', 0)
-        prev_net_income = prev_financials.get('Net Income', 0)
-        shares = balance.get('Ordinary Shares Number', 1)
-        current_eps = current_net_income / shares if shares > 0 else 0
-        prev_eps = prev_net_income / shares if shares > 0 else 0
-        return ((current_eps / prev_eps) - 1) * 100 if prev_eps > 0 else 0
-    result_df['Quarterly_EPS_Growth'] = result_df.apply(calc_quarterly_eps_growth, axis=1)
-
-    def calc_quarterly_net_margin_growth(row):
-        current_financials, prev_financials = get_quarter_data(data['quarterly_financials'], row.name, include_previous=True)
-        current_net_income = current_financials.get('Net Income', 0)
-        current_revenue = current_financials.get('Total Revenue', 1)
-        prev_net_income = prev_financials.get('Net Income', 0)
-        prev_revenue = prev_financials.get('Total Revenue', 1)
-        current_margin = current_net_income / current_revenue if current_revenue > 0 else 0
-        prev_margin = prev_net_income / prev_revenue if prev_revenue > 0 else 0
-        return ((current_margin / prev_margin) - 1) * 100 if prev_margin > 0 else 0
-    result_df['Quarterly_Net_Margin_Growth'] = result_df.apply(calc_quarterly_net_margin_growth, axis=1)
-
-    # 기술적 지표 (Mark Minervini)
-    result_df['Above_50MA'] = data['history']['Close'] > data['history']['Close'].rolling(50).mean()
-    result_df['50MA_Uptrend'] = data['history']['Close'].rolling(50).mean().diff(30) > 0
-    result_df['MA_Alignment'] = (data['history']['Close'].rolling(50).mean() > data['history']['Close'].rolling(150).mean()) & \
-                                (data['history']['Close'].rolling(150).mean() > data['history']['Close'].rolling(200).mean())
-    result_df['Near_52W_High'] = data['history']['Close'] >= data['history']['High'].rolling(252).max() * 0.95
-    result_df['Above_52W_Low'] = data['history']['Close'] > data['history']['Low'].rolling(252).min() * 1.3
-
-    def calc_35d_volatility(row):
-        high = data['history']['High'][row.name - timedelta(days=35):row.name].max()
-        low = data['history']['Low'][row.name - timedelta(days=35):row.name].min()
-        return ((high - low) / low) * 100 if low > 0 else 0
-    result_df['35D_Volatility'] = result_df.apply(calc_35d_volatility, axis=1)
-
-    def calc_base_high(row):
-        base_high = data['history']['High'][row.name - timedelta(days=180):row.name].max()
-        recent_high = data['history']['High'][row.name - timedelta(days=10):row.name].max()
-        return recent_high == base_high
-    result_df['Base_High'] = result_df.apply(calc_base_high, axis=1)
-
-    def calc_vcp(row):
-        base_start = row.name - timedelta(days=180)
-        base_end = row.name - timedelta(days=90)
-        tr = data['history']['High'][base_start:base_end] - data['history']['Low'][base_start:base_end]
-        tr_decreases = (tr.diff() < 0).rolling(20).sum() >= 2
-        correction = ((data['history']['High'][base_start:base_end].max() - data['history']['Low'][base_start:base_end].min()) / 
-                      data['history']['High'][base_start:base_end].max()) * 100
-        volume_drop = data['history']['Volume'][row.name - timedelta(days=10):row.name].mean() <= \
-                      data['history']['Volume'][base_start:base_end].max() * 0.5
-        return tr_decreases and (8 <= correction <= 35) and volume_drop
-    result_df['VCP'] = result_df.apply(calc_vcp, axis=1)
-
-    return result_df
+    return result
