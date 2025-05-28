@@ -66,7 +66,9 @@ def calculate_indicators(data: dict) -> pd.DataFrame:
     result = pd.DataFrame(index=idx)
     result['Date'] = idx
     result['Close'] = hist['Close']
-    result['Avg_Daily_Volume'] = hist['Volume'].rolling(252).mean()
+    result['Avg_Daily_Volume_252'] = hist['Volume'].rolling(252).mean()
+    result['Avg_Daily_Volume_50'] = hist['Volume'].rolling(50).mean()
+    result['Avg_Daily_Volume_20'] = hist['Volume'].rolling(20).mean()
     result['Market_Cap'] = market_cap
 
     # Benjamin Graham
@@ -76,7 +78,7 @@ def calculate_indicators(data: dict) -> pd.DataFrame:
     result['Dividend_Yield'] = hist['Dividends'].rolling(252).sum() / hist['Close'] * 100
     # dps = (cf['Cash Dividends Paid'].abs() / bs['Ordinary Shares Number']).reindex(idx, method='ffill')
     # result['Dividend_Yield2'] = (dps / hist['Close'] * 100)
-    result['ICR'] = fin_q['EBIT'] / interest_expense.abs()
+    result['ICR'] = fin_q['EBIT'] / interest_expense.abs() # Interest Coverage Ratio(이자보상배율)
     result['Debt_Ratio'] = bs_q['Total Liabilities Net Minority Interest'] / bs_q['Total Assets'] * 100
     result['Current_Ratio'] = tca / tcl
     result['Quick_Ratio'] = (tca - bs_q['Inventory']) / tcl
@@ -87,12 +89,12 @@ def calculate_indicators(data: dict) -> pd.DataFrame:
     consistent = good_years.rolling(5).apply(lambda x: x.all(), raw=True).reindex(idx, method='ffill')
     result['Profit_Consistency'] = consistent.astype(bool)
 
-    # EPS CAGR (5 years)
+    # EPS CAGR (3 years) / PEG Ratio
     annual_eps = (fin['Net Income']/bs['Ordinary Shares Number']).resample('A').last()
-    print(annual_eps)
     result['EPS'] = annual_eps.reindex(idx, method='ffill')
     result['EPS_CAGR'] = ((annual_eps.pct_change(3).add(1).pow(1/3).sub(1).mul(100))
                         .reindex(idx, method='ffill'))
+    result['PEG_Ratio'] = result['PE_Ratio'] / result['EPS_CAGR']
 
     # Ken Fisher
     result['PSR'] = market_cap / fin_ttm['Total Revenue_TTM']
@@ -123,7 +125,7 @@ def calculate_indicators(data: dict) -> pd.DataFrame:
     ma150 = hist['Close'].rolling(150).mean()
     ma200 = hist['Close'].rolling(200).mean()
     result['Above_50MA'] = hist['Close'] > ma50
-    result['50MA_Uptrend'] = ma50.diff(30) > 0
+    result['50MA_Uptrend_30d'] = ma50.diff(30) > 0
     result['MA_Alignment'] = (ma50 > ma150) & (ma150 > ma200)
     high_52w = hist['High'].rolling(252).max()
     low_52w = hist['Low'].rolling(252).min()
@@ -146,5 +148,31 @@ def calculate_indicators(data: dict) -> pd.DataFrame:
 
     # Annualized return for calculate RS
     result['12M_Return_excl_1W'] = hist['Close'].shift(5).pct_change(252) * 100
+
+    # Peter Lynch
+    result['Operating_Margin'] = (fin_ttm['Operating Income_TTM'] 
+                              / fin_ttm['Total Revenue_TTM'] * 100)
+
+    # Jesse Livermore
+    prev_close = hist['Close'].shift(1)
+    tr = pd.concat([hist['High'] - hist['Low'], (hist['High'] - prev_close).abs(),
+                    (hist['Low']  - prev_close).abs()], axis=1).max(axis=1)
+    result['ATR14'] = tr.rolling(14).mean()
+
+    result['Pivot_Low'] = hist['Close'].lt(hist['Close'].shift(1)) & hist['Close'].lt(hist['Close'].shift(-1))
+    pivot_high = hist['Close'].gt(hist['Close'].shift(1)) & hist['Close'].gt(hist['Close'].shift(-1))
+    result['Pivot_High'] = pivot_high
+    result['Recent_20_Pivot_High'] = hist['High'].where(pivot_high).rolling(20, min_periods=1).max()
+
+    vol20_avg = hist['Volume'].rolling(20).mean()
+    result['Entry_Signal'] = (hist['Close'] > result['Recent_20_Pivot_High']) & (hist['Volume'] > vol20_avg * 1.5)
+
+
+    # William O'Neil
+    eps_q  = (data['quarterly_financials']['Net Income'] / data['quarterly_balance_sheet']['Ordinary Shares Number'])
+    eps_q_yoy = eps_q.pct_change(4).mul(100)
+    result['EPS_Q_YoY'] = eps_q_yoy.reindex(idx, method='ffill')
+    result['Above_200_MA'] = hist['Close'] > ma200
+    result['50MA_Uptrend_20d'] = ma50.diff(20) > 0
 
     return result

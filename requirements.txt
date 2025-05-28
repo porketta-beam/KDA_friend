@@ -198,7 +198,7 @@ notebook @ file:///C:/b/abs_feeub5ouq6/croot/notebook_1727197380211/work
 notebook_shim @ file:///C:/Users/dev-admin/perseverance-python-buildout/croot/notebook-shim_1701806592322/work
 numba @ file:///C:/b/abs_51yyu3qucu/croot/numba_1720540987599/work
 numexpr @ file:///C:/Users/dev-admin/perseverance-python-buildout/croot/numexpr_1699503421264/work
-numpy @ file:///C:/b/abs_c1ywpu18ar/croot/numpy_and_numpy_base_1708638681471/work/dist/numpy-1.26.4-cp312-cp312-win_amd64.whl#sha256=becc06674317799ad0165a939a7613809d0bee9bd328a1e4308c57c39cacf08c
+numpy==1.26.3
 numpydoc @ file:///C:/b/abs_bbspp5l8vu/croot/numpydoc_1718279185573/work
 ollama==0.4.8
 openai==1.78.1
@@ -207,7 +207,7 @@ openpyxl @ file:///C:/b/abs_0e6ca21lac/croot/openpyxl_1721752965859/work
 osqp==1.0.4
 overrides @ file:///C:/Users/dev-admin/perseverance-python-buildout/croot/overrides_1701806336503/work
 packaging @ file:///C:/b/abs_c3vlh0z4jw/croot/packaging_1720101866539/work
-pandas==2.2.3
+pandas==2.2.0
 pandocfilters @ file:///opt/conda/conda-bld/pandocfilters_1643405455980/work
 panel @ file:///C:/b/abs_fas2lxv_bs/croot/panel_1728066386547/work
 param @ file:///C:/b/abs_b4yato0oux/croot/param_1719347953072/work
@@ -332,7 +332,7 @@ spyder-kernels @ file:///C:/b/abs_e5u6y4ldr2/croot/spyder-kernels_1707937767956/
 SQLAlchemy @ file:///C:/b/abs_7duxw5rxx8/croot/sqlalchemy_1725885067126/work
 stack-data @ file:///opt/conda/conda-bld/stack_data_1646927590127/work
 statsmodels @ file:///C:/b/abs_54b33xdukx/croot/statsmodels_1718381209933/work
-streamlit @ file:///C:/b/abs_84p_54gim8/croot/streamlit_1724335176234/work
+streamlit==1.32.0
 sympy==1.14.0
 tables @ file:///C:/b/abs_92un5wtnqq/croot/pytables_1725380800658/work
 tabulate @ file:///C:/Users/dev-admin/perseverance-python-buildout/croot/tabulate_1701812852133/work

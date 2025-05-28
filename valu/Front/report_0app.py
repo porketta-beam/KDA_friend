@@ -1,6 +1,6 @@
 import streamlit as st
-from b_sidebar import render_sidebar_content
-from b_main import render_main_content
+from report_sidebar import render_sidebar_content
+from report_main import render_main_content
 
 def main():
     st.set_page_config(
