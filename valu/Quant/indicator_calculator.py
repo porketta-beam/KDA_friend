@@ -91,7 +91,6 @@ def calculate_indicators(data: dict) -> pd.DataFrame:
 
     # EPS CAGR (3 years) / PEG Ratio
     annual_eps = (fin['Net Income']/bs['Ordinary Shares Number']).resample('A').last()
-    print(annual_eps)
     result['EPS'] = annual_eps.reindex(idx, method='ffill')
     result['EPS_CAGR'] = ((annual_eps.pct_change(3).add(1).pow(1/3).sub(1).mul(100))
                         .reindex(idx, method='ffill'))
@@ -126,7 +125,7 @@ def calculate_indicators(data: dict) -> pd.DataFrame:
     ma150 = hist['Close'].rolling(150).mean()
     ma200 = hist['Close'].rolling(200).mean()
     result['Above_50MA'] = hist['Close'] > ma50
-    result['50MA_Uptrend'] = ma50.diff(30) > 0
+    result['50MA_Uptrend_30d'] = ma50.diff(30) > 0
     result['MA_Alignment'] = (ma50 > ma150) & (ma150 > ma200)
     high_52w = hist['High'].rolling(252).max()
     low_52w = hist['Low'].rolling(252).min()
@@ -161,15 +160,19 @@ def calculate_indicators(data: dict) -> pd.DataFrame:
     result['ATR14'] = tr.rolling(14).mean()
 
     result['Pivot_Low'] = hist['Close'].lt(hist['Close'].shift(1)) & hist['Close'].lt(hist['Close'].shift(-1))
-    result['Pivot_High'] = hist['Close'].gt(hist['Close'].shift(1)) & hist['Close'].gt(hist['Close'].shift(-1))
-    result['Recent_20_Pivot_High'] = hist['High'].where(result['Pivot_High']).rolling(20).max()
+    pivot_high = hist['Close'].gt(hist['Close'].shift(1)) & hist['Close'].gt(hist['Close'].shift(-1))
+    result['Pivot_High'] = pivot_high
+    result['Recent_20_Pivot_High'] = hist['High'].where(pivot_high).rolling(20, min_periods=1).max()
 
     vol20_avg = hist['Volume'].rolling(20).mean()
-    result['Entry_Signal'] = (hist['Close'] > result['Recent_Pivot_High']) & (hist['Volume'] > vol20_avg * 1.5)
+    result['Entry_Signal'] = (hist['Close'] > result['Recent_20_Pivot_High']) & (hist['Volume'] > vol20_avg * 1.5)
+
 
     # William O'Neil
-    eps_q = (fin_q['Net Income'] / bs_q['Ordinary Shares Number'])
+    eps_q  = (data['quarterly_financials']['Net Income'] / data['quarterly_balance_sheet']['Ordinary Shares Number'])
     eps_q_yoy = eps_q.pct_change(4).mul(100)
-    result['EPS_YoY_Q'] = eps_q_yoy.reindex(idx, method='ffill')
+    result['EPS_Q_YoY'] = eps_q_yoy.reindex(idx, method='ffill')
+    result['Above_200_MA'] = hist['Close'] > ma200
+    result['50MA_Uptrend_20d'] = ma50.diff(20) > 0
 
     return result
