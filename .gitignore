@@ -115,3 +115,6 @@ node_modules/
 # Task files
 tasks.json
 tasks/ 
+
+# context7 규칙 파일 공유 방지
+.cursor/rules/context7.mdc 
