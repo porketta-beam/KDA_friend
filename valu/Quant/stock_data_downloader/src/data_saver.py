@@ -29,11 +29,15 @@ class DataSaver:
         return True
 
     def save_financial_data(self, financial_data: Dict[str, pd.DataFrame], ticker: str) -> None:
-        """재무 데이터 저장."""
+        """재무 데이터 저장 (기존 데이터와 병합)."""
         for data_type, df in financial_data.items():
             if df.empty:
                 continue
-            df_processed = DataProcessor.process_financial_data(df)
             file_path = self.base_path / data_type / f"{ticker}_{data_type}.feather"
-            df_processed.reset_index().to_feather(file_path)
-            print(f"{ticker} {data_type} 데이터가 저장되었습니다.")
+            
+            # 기존 데이터와 병합
+            df_processed = DataProcessor.merge_financial_data(df, file_path, ticker, data_type)
+            
+            if df_processed is not None and not df_processed.empty:
+                df_processed.reset_index().to_feather(file_path)
+                print(f"{ticker} {data_type} 데이터가 저장되었습니다.")
