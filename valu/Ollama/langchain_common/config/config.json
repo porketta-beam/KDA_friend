@@ -1,0 +1,53 @@
+{
+  "base_path": "documents",
+  "document_types": {
+    "text": {
+      "extensions": ["txt", "ipynb", "sql"],
+      "loader": "TextLoader",
+      "kwargs": {
+        "encoding": "utf-8",
+        "errors": "ignore"
+      }
+    },
+    "csv": {
+      "extensions": ["csv"],
+      "loader": "CSVLoader",
+      "kwargs": {
+        "encoding": "utf-8"
+      }
+    },
+    "ppt": {
+      "extensions": ["ppt", "pptx"],
+      "loader": "UnstructuredPowerPointLoader",
+      "kwargs": {}
+    },
+    "pdf": {
+      "extensions": ["pdf"],
+      "loader": "UnstructuredPDFLoader",
+      "kwargs": {}
+    },
+    "html": {
+      "extensions": ["html", "htm"],
+      "loader": "UnstructuredHTMLLoader",
+      "kwargs": {}
+    }
+  },
+  "chunk_size": 500,
+  "chunk_overlap": 100,
+  "embedding_model": "mxbai-embed-large",
+  "batch_size": 100,
+  "faiss_index_path": "faiss_index",
+  "llm_model": "llama3:8b",
+  "ollama_base_url": "http://127.0.0.1:11435",
+  "temperature": 0.2,
+  "max_tokens": 512,
+  "retriever_k": 3,
+  "poppler_path": "C:\\Program Files\\poppler-24.08.0\\Library\\bin",
+  "tesseract_path": "C:\\Program Files\\Tesseract-OCR\\tesseract.exe",
+  "output_formats": ["txt"],
+  "prompts": {
+    "rag": {
+      "template": "다음 질문에 대해 로컬 문서 데이터를 바탕으로 답변해 주세요. 초보자가 이해하기 쉽게 설명해 주세요.\n질문: {question}"
+    }
+  }
+}
