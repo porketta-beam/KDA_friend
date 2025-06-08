@@ -8,7 +8,6 @@ __pycache__/
 venv/
 ENV/
 *.egg-info/
-dist/
 build/
 *.egg
 

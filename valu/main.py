@@ -29,6 +29,10 @@ def post_giant_request_recommend(request: Giant_request):
     print(request.cp_list)
     return JSONResponse(content={'cp_list': 'json'})
 
+# path parameter 요청 예제
+@app.get("/api/path_example/{item_id}")
+def get_path_example(item_id: int):
+    return JSONResponse(content={'item_id': item_id})
 
 
 # query parameter 요청 예제
