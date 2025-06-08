@@ -15,20 +15,30 @@ class DataProcessor:
     ) -> Optional[pd.DataFrame]:
         """주식 가격 데이터 처리."""
         try:
-            existing_data = None
+            existing_data: Optional[pd.DataFrame] = None
+            
+            # 1) 기존 파일에서 읽어오기
             if existing_file.exists():
                 existing_data = pd.read_feather(existing_file)
                 existing_data['Date'] = pd.to_datetime(existing_data['Date'], errors='coerce')
                 existing_data = existing_data.set_index('Date')
-                if existing_data.index.tz is not None:
-                    existing_data.index = existing_data.index.tz_convert(None)
+                
+                # 기존 인덱스도 로컬 날짜 기준으로 정규화 후 tz 제거
+                existing_data.index = existing_data.index.normalize()
+                existing_data.index = existing_data.index.tz_localize(None)
 
+            # 2) 새 데이터가 없다면 기존 데이터 반환
             if new_data.empty:
                 return existing_data
-            
+
+            # 3) 기존 + 새 데이터 병합
             df = pd.concat([existing_data, new_data]) if existing_data is not None else new_data
             df = df[~df.index.duplicated(keep='last')]
-            df.index = pd.to_datetime(df.index, errors='coerce').normalize()
+
+            # 4) 병합 후 인덱스도 로컬 날짜 기준으로 정규화 후 tz 제거
+            df.index = pd.to_datetime(df.index, errors='coerce')
+            df.index = df.index.normalize()
+            df.index = df.index.tz_localize(None)
             
             return df
 
@@ -55,24 +65,37 @@ class DataProcessor:
     ) -> Optional[pd.DataFrame]:
         """기존 재무 데이터와 새로운 재무 데이터를 병합."""
         try:
-            existing_data = None
+            existing_data: Optional[pd.DataFrame] = None
+            
+            # 1) 기존 파일에서 읽어오기
             if existing_file.exists():
                 existing_data = pd.read_feather(existing_file)
                 existing_data['Date'] = pd.to_datetime(existing_data['Date'], errors='coerce')
                 existing_data = existing_data.set_index('Date')
-                if existing_data.index.tz is not None:
-                    existing_data.index = existing_data.index.tz_convert(None)
+                
+                # 기존 인덱스도 로컬 날짜 기준으로 정규화 후 tz 제거
+                existing_data.index = existing_data.index.normalize()
+                existing_data.index = existing_data.index.tz_localize(None)
 
+            # 2) 새 데이터가 없다면 기존 데이터 반환
             if new_data.empty:
                 return existing_data
 
-            # 새로운 데이터 처리
+            # 3) 새로운 재무 데이터 전처리
             new_data_processed = DataProcessor.process_financial_data(new_data)
             
-            # 기존 데이터와 병합
-            df = pd.concat([existing_data, new_data_processed]) if existing_data is not None else new_data_processed
-            df = df[~df.index.duplicated(keep='last')]  # 중복 날짜는 최신 데이터로 유지
-            df.index = pd.to_datetime(df.index, errors='coerce').normalize()
+            # 4) 기존 + 새 데이터 병합
+            df = (
+                pd.concat([existing_data, new_data_processed])
+                if existing_data is not None
+                else new_data_processed
+            )
+            df = df[~df.index.duplicated(keep='last')]
+
+            # 5) 병합 후 인덱스도 로컬 날짜 기준으로 정규화 후 tz 제거
+            df.index = pd.to_datetime(df.index, errors='coerce')
+            df.index = df.index.normalize()
+            df.index = df.index.tz_localize(None)
             
             return df
 

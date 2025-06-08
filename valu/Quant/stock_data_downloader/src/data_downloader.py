@@ -46,7 +46,8 @@ class DataDownloader:
                     )
                     await asyncio.sleep(REQUEST_TIMEOUT)
                     if data.index.tz is not None:
-                        data.index = data.index.tz_convert(None)
+                        data.index = data.index.normalize()
+                        data.index = data.index.tz_localize(None)
                     return data
             except Exception as e:
                 if attempt < self.max_retries - 1:

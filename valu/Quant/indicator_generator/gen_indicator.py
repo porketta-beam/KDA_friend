@@ -2,7 +2,7 @@
 import pandas as pd
 from pathlib import Path
 from concurrent.futures import ProcessPoolExecutor, as_completed
-from .indicator_calculator import calculate_indicators
+from .calculator_indicator import calculate_indicators
 from .data_loader import load_data
 
 
@@ -55,7 +55,7 @@ def main():
         futures = {executor.submit(process_ticker, t, base_dir): t for t in tickers}
         for future in as_completed(futures):
             ticker, success = future.result()
-            status = "✔" if success else "✖"
+            status = "O" if success else "X"
             print(f"{ticker}: {status}")
             success_count += int(success)
 

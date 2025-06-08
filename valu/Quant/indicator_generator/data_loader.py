@@ -31,7 +31,7 @@ def load_data(ticker, data_path):
     try:
         data['history'] = check_sorted(
             pd.read_feather(stock_data_path / f"{ticker}_data.feather").set_index('Date'), 'history')
-        print(f"Successfully loaded {ticker} history with index: {data['history'].index[:5]}")
+        # print(f"Successfully loaded {ticker} history with index: {data['history'].index[:5]}")
 
         financials_df = pd.read_feather(financials_path / f"{ticker}_financials.feather")
         financials_df = financials_df.set_index('Date' if 'Date' in financials_df.columns else financials_df.index)

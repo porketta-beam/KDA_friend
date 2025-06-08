@@ -3,82 +3,55 @@ Windows 볼륨에 대한 폴더 경로의 목록입니다.
 C:.
 │  basic_functions.ipynb
 │  basic_practice.ipynb
-│  data_loader.py
 │  folder_structure.txt
-│  gen_indicator.py
-│  indicator_calculator.py
-│  indicator_filter.py
-│  stock_data_downloader.py
-│  _pykrx_test.ipynb
-│  __init__.py
+
+
+
+├─indicator_generator
+│  │  __init__.py
+│  │  main.py
+│  │  calc_giants_strategies.py
+│  │  calculator_indicator.py
+│  │  calculator_rs.py
+│  │  data_loader.py
+│  │  gen_giants_picks.py
+│  │  gen_indicator.py
 │  
 ├─src_data
 │  │  errors.log
 │  │  
 │  ├─balance_sheet
-│  │      000020.KQ_balance_sheet.feather
-│  │      000660.KS_balance_sheet.feather
-│  │      005930.KS_balance_sheet.feather
 │  │      035420.KS_balance_sheet.feather
-│  │      TSLA_balance_sheet.feather
 │  │      
 │  ├─cash_flow
-│  │      000020.KQ_cash_flow.feather
-│  │      000660.KS_cash_flow.feather
-│  │      005930.KS_cash_flow.feather
 │  │      035420.KS_cash_flow.feather
-│  │      TSLA_cash_flow.feather
 │  │      
 │  ├─financials
-│  │      000020.KQ_financials.feather
-│  │      000660.KS_financials.feather
-│  │      005930.KS_financials.feather
 │  │      035420.KS_financials.feather
-│  │      TSLA_financials.feather
 │  │      
 │  ├─giants_pick
-│  │      035420.KS_giants_pick.csv
+│  │      035420.KS_giants_picks.feather
 │  │      
 │  ├─indicators
-│  │      000660.KS_indicator.feather
-│  │      005930.KS_indicator.feather
-│  │      035420.KS_indicator.csv
 │  │      035420.KS_indicator.feather
 │  │      
 │  ├─quarterly_balance_sheet
-│  │      000020.KQ_quarterly_balance_sheet.feather
-│  │      000660.KS_quarterly_balance_sheet.feather
-│  │      005930.KS_quarterly_balance_sheet.feather
 │  │      035420.KS_quarterly_balance_sheet.feather
-│  │      TSLA_quarterly_balance_sheet.feather
 │  │      
 │  ├─quarterly_cash_flow
-│  │      000020.KQ_quarterly_cash_flow.feather
-│  │      000660.KS_quarterly_cash_flow.feather
-│  │      005930.KS_quarterly_cash_flow.feather
 │  │      035420.KS_quarterly_cash_flow.feather
-│  │      TSLA_quarterly_cash_flow.feather
 │  │      
 │  ├─quarterly_financials
-│  │      000020.KQ_quarterly_financials.feather
-│  │      000660.KS_quarterly_financials.feather
-│  │      005930.KS_quarterly_financials.feather
 │  │      035420.KS_quarterly_financials.feather
-│  │      TSLA_quarterly_financials.feather
 │  │      
 │  ├─stock_data
-│  │      000020.KQ_data.feather
-│  │      000660.KS_data.feather
-│  │      005930.KS_data.feather
 │  │      035420.KS_data.feather
-│  │      TSLA_data.feather
 │  │      
 │  └─ticker_list
 │          tickers.csv
 │          
 ├─stock_data_downloader
 │  │  main.py
-│  │  tree
 │  │  
 │  ├─config
 │  │      settings.json
@@ -89,21 +62,5 @@ C:.
 │      │  data_processor.py
 │      │  data_saver.py
 │      │  __init__.py
-│      │  
-│      └─__pycache__
-│              constants.cpython-310.pyc
-│              constants.cpython-313.pyc
-│              data_downloader.cpython-310.pyc
-│              data_downloader.cpython-313.pyc
-│              data_processor.cpython-310.pyc
-│              data_processor.cpython-313.pyc
-│              data_saver.cpython-310.pyc
-│              data_saver.cpython-313.pyc
-│              __init__.cpython-310.pyc
-│              __init__.cpython-313.pyc
-│              
-└─__pycache__
-        data_loader.cpython-313.pyc
-        indicator_calculator.cpython-313.pyc
-        test_indicator_calculator.cpython-313.pyc
+
         
