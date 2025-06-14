@@ -9,7 +9,11 @@ def create_connection():
     .env에서 환경변수를 읽어서 psycopg2 커넥션 객체를 반환합니다.
     Supabase(혹은 Pooler) 연결 시에는 sslmode="require"를 꼭 붙여야 합니다.
     """
-    load_dotenv()
+    base_dir   = os.path.dirname(os.path.abspath(__file__))
+    parent_dir = os.path.abspath(os.path.join(base_dir, os.pardir))
+    env_path   = os.path.join(parent_dir, ".env.supabase")
+
+    load_dotenv(env_path)
 
     USER     = os.getenv("user")      # ex) postgres.프로젝트레퍼런스
     PASSWORD = os.getenv("password")  # Supabase에서 복사해 온 비밀번호

@@ -3,15 +3,44 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-def filter_benjamin_graham(df: pd.DataFrame) -> pd.Series:
+def normalize_score(all_data: pd.DataFrame, metric: str, reverse: bool = False) -> pd.Series:
     """
-    Benjamin Graham의 기준으로 주식을 필터링.
+    동일 시점에서 모든 종목의 지표값을 기준으로 정규화.
     
     Args:
-        df: Single ticker DataFrame with Date index
+        all_data: MultiIndex (Date, Ticker) DataFrame
+        metric: 정규화할 지표 이름
+        reverse: True면 낮은 값이 높은 점수로 변환
     Returns:
-        pd.Series: 필터링 조건 충족 여부 (index: Date)
+        pd.Series: 정규화된 점수 (MultiIndex: Date, Ticker)
     """
+    if metric not in all_data.columns:
+        logger.warning(f"컬럼 {metric} 누락, 0.0으로 반환")
+        return pd.Series(0.0, index=all_data.index)
+    
+    # 날짜별로 그룹화하여 정규화
+    def normalize_group(group):
+        series = group[metric]
+        if series.isna().all():
+            return pd.Series(0.0, index=series.index)
+        min_val, max_val = series.min(), series.max()
+        if min_val == max_val:
+            return pd.Series(1.0, index=series.index)
+        normalized = (series - min_val) / (max_val - min_val)
+        return 1 - normalized if reverse else normalized
+
+    return all_data.groupby(level='Date').apply(normalize_group).droplevel(0)
+
+def filter_benjamin_graham(all_data: pd.DataFrame, ticker: str) -> tuple[pd.Series, pd.Series]:
+    """
+    Benjamin Graham의 기준으로 주식을 필터링하고 스코어 계산.
+    
+    Args:
+        all_data: MultiIndex (Date, Ticker) DataFrame
+        ticker: 대상 종목 코드
+    """
+    df = all_data.xs(ticker, level='Ticker')
+    
     universe_filter = (
         (df['Avg_Daily_Volume_252'] >= 200000) &
         (df['Market_Cap'] >= 100000000000)
@@ -41,17 +70,30 @@ def filter_benjamin_graham(df: pd.DataFrame) -> pd.Series:
         financial_stability &
         earnings_consistency
     )
-    return is_pick
+    score_components = {
+        'NCAV_to_MarketCap': 0.25,
+        'PE_Ratio': 0.20,
+        'Dividend_Yield': 0.10,
+        'ICR': 0.10,
+        'Debt_Ratio': 0.10,
+        'Current_Ratio': 0.05,
+        'EPS_CAGR': 0.20
+    }
+    total_score = pd.Series(0.0, index=df.index)
+    for metric, weight in score_components.items():
+        if metric not in all_data.columns:
+            logger.warning(f"컬럼 {metric} 누락, 스코어 계산에서 제외")
+            continue
+        normalized = normalize_score(all_data, metric, reverse=(metric in ['PE_Ratio', 'Debt_Ratio']))
+        total_score += normalized.xs(ticker, level='Ticker') * weight
+    return is_pick, total_score
 
-def filter_ken_fisher(df: pd.DataFrame) -> pd.Series:
+def filter_ken_fisher(all_data: pd.DataFrame, ticker: str) -> tuple[pd.Series, pd.Series]:
     """
-    Ken Fisher의 기준으로 주식을 필터링.
+    Ken Fisher의 기준으로 주식을 필터링하고 스코어 계산.
+    """
+    df = all_data.xs(ticker, level='Ticker')
     
-    Args:
-        df: Single ticker DataFrame with Date index
-    Returns:
-        pd.Series: 필터링 조건 충족 여부 (index: Date)
-    """
     universe_filter = (
         (df['Avg_Daily_Volume_252'] >= 300000) &
         (df['Market_Cap'] >= 100000000000)
@@ -80,17 +122,29 @@ def filter_ken_fisher(df: pd.DataFrame) -> pd.Series:
         profitability_stability &
         momentum_filter
     )
-    return is_pick
+    score_components = {
+        'PSR': 0.20,
+        'FCF_Yield': 0.15,
+        'Sales_CAGR': 0.15,
+        'ROE': 0.15,
+        '12M_Return_excl_1M': 0.20,
+        '6M_Return': 0.15
+    }
+    total_score = pd.Series(0.0, index=df.index)
+    for metric, weight in score_components.items():
+        if metric not in all_data.columns:
+            logger.warning(f"컬럼 {metric} 누락, 스코어 계산에서 제외")
+            continue
+        normalized = normalize_score(all_data, metric, reverse=(metric == 'PSR'))
+        total_score += normalized.xs(ticker, level='Ticker') * weight
+    return is_pick, total_score
 
-def filter_peter_lynch(df: pd.DataFrame) -> pd.Series:
+def filter_peter_lynch(all_data: pd.DataFrame, ticker: str) -> tuple[pd.Series, pd.Series]:
     """
-    Peter Lynch GARP 전략으로 주식을 필터링.
+    Peter Lynch GARP 전략으로 주식을 필터링하고 스코어 계산.
+    """
+    df = all_data.xs(ticker, level='Ticker')
     
-    Args:
-        df: Single ticker DataFrame with Date index
-    Returns:
-        pd.Series: 필터링 조건 충족 여부 (index: Date)
-    """
     universe_filter = (
         (df['Avg_Daily_Volume_50'] >= 500000) &
         (df['Market_Cap'] >= 500000000000)
@@ -125,16 +179,26 @@ def filter_peter_lynch(df: pd.DataFrame) -> pd.Series:
         profitability_filter &
         momentum_filter
     )
-    return is_pick
+    score_components = {
+        'Revenue_YoY': 0.20,
+        'EPS_CAGR': 0.20,
+        'PEG_Ratio': 0.15,
+        'PE_Ratio': 0.10,
+        'ROE': 0.15,
+        '6M_Return': 0.20
+    }
+    total_score = pd.Series(0.0, index=df.index)
+    for metric, weight in score_components.items():
+        if metric not in all_data.columns:
+            logger.warning(f"컬럼 {metric} 누락, 스코어 계산에서 제외")
+            continue
+        normalized = normalize_score(all_data, metric, reverse=(metric in ['PEG_Ratio', 'PE_Ratio']))
+        total_score += normalized.xs(ticker, level='Ticker') * weight
+    return is_pick, total_score
 
 def filter_jesse_livermore(df: pd.DataFrame) -> pd.Series:
     """
     Jesse Livermore의 기술적 전략으로 주식을 필터링.
-    
-    Args:
-        df: Single ticker DataFrame with Date index
-    Returns:
-        pd.Series: 필터링 조건 충족 여부 (index: Date)
     """
     universe_filter = (
         (df['Avg_Daily_Volume_20'] >= 200000) &
@@ -148,11 +212,6 @@ def filter_jesse_livermore(df: pd.DataFrame) -> pd.Series:
 def filter_mark_minervini(df: pd.DataFrame) -> pd.Series:
     """
     Mark Minervini의 전략으로 주식을 필터링.
-    
-    Args:
-        df: Single ticker DataFrame with Date index
-    Returns:
-        pd.Series: 필터링 조건 충족 여부 (index: Date)
     """
     universe_filter = (
         (df['Avg_Daily_Volume_252'] >= 100000) &
@@ -188,11 +247,6 @@ def filter_mark_minervini(df: pd.DataFrame) -> pd.Series:
 def filter_william_oneil(df: pd.DataFrame) -> pd.Series:
     """
     William O'Neil CANSLIM 전략으로 주식을 필터링.
-    
-    Args:
-        df: Single ticker DataFrame with Date index
-    Returns:
-        pd.Series: 필터링 조건 충족 여부 (index: Date)
     """
     universe_filter = (
         (df['Avg_Daily_Volume_50'] >= 200000) &

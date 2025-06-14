@@ -5,12 +5,14 @@ from dotenv import load_dotenv
 import os
 import pandas as pd
 from io import StringIO
+from typing import List, Optional
 
-def create_connection():
+
+def create_connection(env_path) -> psycopg2.extensions.connection:
     """
     .env에서 환경변수를 읽어 psycopg2 연결 객체를 반환합니다.
     """
-    load_dotenv()
+    load_dotenv(env_path, override=True)
 
     USER     = os.getenv("user")
     PASSWORD = os.getenv("password")
@@ -28,10 +30,19 @@ def create_connection():
     )
     return conn
 
-def insert_csv_to_company_info(csv_path: str):
+
+def insert_csv_to_table(
+    env_path: str,    
+    csv_path: str,
+    table_name: str,
+    columns: Optional[List[str]] = None
+) -> None:
     """
-    company_data.csv 같은 CSV 파일을 읽어서, company_info 테이블에 한 번에 삽입합니다.
-    - csv_path : 로컬에 있는 CSV 파일 경로
+    CSV 파일을 읽어 지정된 테이블에 한 번에 삽입합니다.
+
+    - csv_path   : 로컬에 있는 CSV 파일 경로
+    - table_name : 삽입할 대상 테이블명
+    - columns    : CSV에서 사용할 컬럼명 리스트 (None일 경우 CSV 헤더 전체 사용)
     """
     conn = None
     try:
@@ -41,23 +52,27 @@ def insert_csv_to_company_info(csv_path: str):
 
         # 2) DataFrame을 메모리상의 StringIO 객체로 변환 (CSV 포맷으로)
         buffer = StringIO()
-        # header=True → CSV의 첫 줄에 컬럼명(ticker,company_name,market_name)을 포함
         df.to_csv(buffer, index=False, header=True)
-        buffer.seek(0)  # 버퍼를 다시 처음 위치로 돌립니다.
+        buffer.seek(0)
 
         # 3) DB 연결 및 COPY 실행
-        conn = create_connection()
+        conn = create_connection(env_path)
         cursor = conn.cursor()
 
-        # company_info 테이블의 컬럼 순서(ticker, company_name, market_name)에 맞추어 복사
-        copy_sql = """
-            COPY company_list (ticker, cp_name, market)
+        # 컬럼 리스트 SQL 생성
+        if columns:
+            col_list_sql = f"({', '.join(columns)})"
+        else:
+            col_list_sql = f"({', '.join(df.columns.tolist())})"
+
+        copy_sql = f"""
+            COPY {table_name} {col_list_sql}
             FROM STDIN WITH CSV HEADER
         """
         cursor.copy_expert(copy_sql, buffer)
         conn.commit()
 
-        print(f"✅ '{csv_path}' 파일의 데이터를 company_info 테이블에 성공적으로 삽입했습니다.")
+        print(f"✅ '{csv_path}' 데이터를 '{table_name}' 테이블에 성공적으로 삽입했습니다.")
         cursor.close()
 
     except Exception as e:
@@ -67,8 +82,15 @@ def insert_csv_to_company_info(csv_path: str):
             conn.close()
             print("🔒 데이터베이스 연결 종료.")
 
+
 if __name__ == "__main__":
-    # 실제 CSV 파일 경로를 지정하세요.
     base_dir = os.path.dirname(os.path.abspath(__file__))
-    csv_file_path = os.path.join(base_dir, 'ticker_names.csv')
-    insert_csv_to_company_info(csv_file_path)
+    parent_dir = os.path.abspath(os.path.join(base_dir, os.pardir))
+    env_path = os.path.join(parent_dir, '.env.local')
+    
+    # 예시: company_info 테이블에 ticker_names.csv 삽입
+    csv_file = os.path.join(base_dir, 'account_list_filled.csv')
+    table = 'account_list'
+    # cols = ['ticker', 'company_name', 'market_name']  # CSV 헤더에 맞춰 지정
+
+    insert_csv_to_table(env_path, csv_file, table)

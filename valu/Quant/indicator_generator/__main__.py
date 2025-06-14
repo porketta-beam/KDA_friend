@@ -3,7 +3,7 @@ from pathlib import Path
 import logging
 from .gen_indicator import main as run_gen_indicator
 from .calculator_rs import calculate_rs
-from .gen_giants_picks import main as filter_giants_pick  # gen_giants_picks의 main 함수 임포트
+from .gen_giants_picks_only_bool import main as filter_giants_pick  # gen_giants_picks의 main 함수 임포트
 
 # 로깅 설정
 logging.basicConfig(
