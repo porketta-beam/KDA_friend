@@ -85,7 +85,7 @@ def main():
     conn       = create_connection(env_config)
 
     end_date   = (datetime.now() + timedelta(days=365)).strftime("%Y%m%d")
-    start_date = (datetime.now() - timedelta(days=5*365)).strftime("%Y%m%d")
+    start_date = (datetime.now() - timedelta(days=20*365)).strftime("%Y%m%d")
 
     prepare_date_table(conn, start_date, end_date)
     conn.close()

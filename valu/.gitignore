@@ -36,3 +36,5 @@ src_data/
 # Jupyter Notebook
 .ipynb_checkpoints
 *.ipynb
+
+**/src_data/
