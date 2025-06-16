@@ -2,8 +2,8 @@ import sys
 from pathlib import Path
 import logging
 from .gen_indicator import main as run_gen_indicator
-from .calculator_rs import calculate_rs
-from .gen_giants_picks import main as filter_giants_pick  # gen_giants_picks의 main 함수 임포트
+from .calculator_rs_v2 import calculate_rs
+from .gen_giants_picks_only_bool import main as filter_giants_pick  # gen_giants_picks의 main 함수 임포트
 
 # 로깅 설정
 logging.basicConfig(
@@ -25,14 +25,14 @@ def run_pipeline():
     
     try:
         # 1. 지표 생성
-        # logger.info("Starting gen_indicator...")
-        # run_gen_indicator()
-        # logger.info("Completed gen_indicator.")
+        logger.info("Starting gen_indicator...")
+        run_gen_indicator()
+        logger.info("Completed gen_indicator.")
         
-        # # 2. 상대강도(RS) 계산
-        # logger.info("Starting calculate_rs...")
-        # calculate_rs()
-        # logger.info("Completed calculate_rs.")
+        # 2. 상대강도(RS) 계산
+        logger.info("Starting calculate_rs...")
+        calculate_rs()
+        logger.info("Completed calculate_rs.")
         
         # 3. 거장별 필터링
         logger.info("Starting giants filtering...")

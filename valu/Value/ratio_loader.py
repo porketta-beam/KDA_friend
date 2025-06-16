@@ -111,11 +111,11 @@ def main(api_key: str, bsns_year: str, output_dir: str, ticker_info_path: str = 
     # ticker_info.csv 읽기
     df_corp = read_ticker_info(os.path.join(output_dir, ticker_info_path))
 
-    # 테스트를 위해 기업 수 제한 (실제 사용시에는 삭제하면 됨)
-    if test_limit is not None:
-        df_corp = df_corp.head(test_limit)
-        print(f"\n테스트를 위해 처음 {test_limit}개 기업만 처리:")
-        print(df_corp[['corp_name', 'corp_code', 'ticker']])
+    # # 테스트를 위해 기업 수 제한 (실제 사용시에는 삭제하면 됨)
+    # if test_limit is not None:
+    #     df_corp = df_corp.head(test_limit)
+    #     print(f"\n테스트를 위해 처음 {test_limit}개 기업만 처리:")
+    #     print(df_corp[['corp_name', 'corp_code', 'ticker']])
     
     # 재무지표 수집
     df_result = fetch_financial_indicators(api_key, df_corp, bsns_year, reprt_code)
@@ -130,7 +130,7 @@ def main(api_key: str, bsns_year: str, output_dir: str, ticker_info_path: str = 
     return pivot_df
 
 if __name__ == "__main__":
-    api_key = ''
+    api_key = api_key
     output_dir = r"C:\Users\gkstnrud\Dev\KDA_friend\valu\Value\src_data"
     bsns_year = "2024"
     main(api_key, bsns_year, output_dir, test_limit=20)
