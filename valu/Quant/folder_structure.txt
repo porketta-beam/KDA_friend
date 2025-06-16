@@ -1,66 +1,120 @@
-Windows º¼·ı¿¡ ´ëÇÑ Æú´õ °æ·ÎÀÇ ¸ñ·ÏÀÔ´Ï´Ù.
-º¼·ı ÀÏ·Ã ¹øÈ£´Â BC6B-1B8DÀÔ´Ï´Ù.
-C:.
-¦¢  basic_functions.ipynb
-¦¢  basic_practice.ipynb
-¦¢  folder_structure.txt
+valu/
+â”œâ”€â”€ Quant/
+â”œâ”€â”€ .env
+â”œâ”€â”€ __init__.py
+â”œâ”€â”€ config.py
+â”œâ”€â”€ database.py
+â”œâ”€â”€ main.py
+â”œâ”€â”€ routers/
+â”‚   â”œâ”€â”€ __init__.py
+â”‚   â””â”€â”€ api_pick.py
+â””â”€â”€ services/
+    â”œâ”€â”€ __init__.py           # í”„ë¡ íŠ¸ ì—”ë“œ í¬ì¸íŠ¸ ì‘ì„±                 (5ë…„ ë°ì´í„°)
+    â””â”€â”€ pick_service.py       # ê²°êµ­ ì—¬ê¸°ì„œ ì‚¬ìš©ì ìš”ì²­ì— ë”°ë¼ pykrx ì£¼ê°€ /dart ì¬ë¬´ ë°ì´í„° ë‹¤ìš´ë¡œë“œ, 
+                    # indicator ê°’ ê³„ì‚°ê¹Œì§€ í•´ì¤˜ì•¼ í•œë‹¤. (ê·¸ë˜í”„ ê·¸ë¦´ ë³´ì¡°ì§€í‘œ, ë°”ì°¨íŠ¸ ê·¸ë¦´ ë¶„ê¸° ìë£Œ)
 
-
-
-¦§¦¡indicator_generator
-¦¢  ¦¢  __init__.py
-¦¢  ¦¢  main.py
-¦¢  ¦¢  calc_giants_strategies.py
-¦¢  ¦¢  calculator_indicator.py
-¦¢  ¦¢  calculator_rs.py
-¦¢  ¦¢  data_loader.py
-¦¢  ¦¢  gen_giants_picks.py
-¦¢  ¦¢  gen_indicator.py
-¦¢  
-¦§¦¡src_data
-¦¢  ¦¢  errors.log
-¦¢  ¦¢  
-¦¢  ¦§¦¡balance_sheet
-¦¢  ¦¢      035420.KS_balance_sheet.feather
-¦¢  ¦¢      
-¦¢  ¦§¦¡cash_flow
-¦¢  ¦¢      035420.KS_cash_flow.feather
-¦¢  ¦¢      
-¦¢  ¦§¦¡financials
-¦¢  ¦¢      035420.KS_financials.feather
-¦¢  ¦¢      
-¦¢  ¦§¦¡giants_pick
-¦¢  ¦¢      035420.KS_giants_picks.feather
-¦¢  ¦¢      
-¦¢  ¦§¦¡indicators
-¦¢  ¦¢      035420.KS_indicator.feather
-¦¢  ¦¢      
-¦¢  ¦§¦¡quarterly_balance_sheet
-¦¢  ¦¢      035420.KS_quarterly_balance_sheet.feather
-¦¢  ¦¢      
-¦¢  ¦§¦¡quarterly_cash_flow
-¦¢  ¦¢      035420.KS_quarterly_cash_flow.feather
-¦¢  ¦¢      
-¦¢  ¦§¦¡quarterly_financials
-¦¢  ¦¢      035420.KS_quarterly_financials.feather
-¦¢  ¦¢      
-¦¢  ¦§¦¡stock_data
-¦¢  ¦¢      035420.KS_data.feather
-¦¢  ¦¢      
-¦¢  ¦¦¦¡ticker_list
-¦¢          tickers.csv
-¦¢          
-¦§¦¡stock_data_downloader
-¦¢  ¦¢  main.py
-¦¢  ¦¢  
-¦¢  ¦§¦¡config
-¦¢  ¦¢      settings.json
-¦¢  ¦¢      
-¦¢  ¦¦¦¡src
-¦¢      ¦¢  constants.py
-¦¢      ¦¢  data_downloader.py
-¦¢      ¦¢  data_processor.py
-¦¢      ¦¢  data_saver.py
-¦¢      ¦¢  __init__.py
-
+valu/Qunat
+        â”œâ”€indicator_generator       # calculator_rsë¥¼ ë” íš¨ìœ¨ì ìœ¼ë¡œ ìˆ˜í–‰í•  ìˆ˜ ìˆë‹¤ë©´?
+        â”‚  â”‚  __init__.py           # ìµœì‹ í™”ë¥¼ ìœ„í•´ ì¼(í–‰) ë‹¨ìœ„ë¡œ ê³„ì‚°í•˜ëŠ” ì½”ë“œê°€ í•„ìš”í•˜ë‹¤.
+        â”‚  â”‚  main.py
+        â”‚  â”‚  calc_giants_strategies.py
+        â”‚  â”‚  calculator_indicator.py
+        â”‚  â”‚  calculator_rs.py
+        â”‚  â”‚  data_loader.py
+        â”‚  â”‚  gen_giants_picks.py
+        â”‚  â”‚  gen_indicator.py
+        â”œâ”€postgreSQL                # ë¡œì»¬ì—ì„œ ë§¤ì¼ í•œë²ˆì”© ì‹¤í–‰, ë°ì´í„°ë¥¼ ì˜¬ë ¤ë†“ê³  ìƒëŒ€ê°•ë„ ê³„ì‚°í•˜ê¸°
+        â”‚  â”œâ”€account_list           # yf ì¬ë¬´ ë°ì´í„°ë¡œ ì§€í‘œê°’ ë¡œì»¬ DBì— ì˜¬ë¦¬ê³  ê³„ì‚°í•˜ëŠ” ì½”ë“œ ì§œê¸°
+        â”‚  â”œâ”€account_processed_data # ê±°ì¥ í”½ ì¢…ëª© ì„ ì •ê¹Œì§€ ì™„ë£Œ í›„, ì„ ì • ì¢…ëª©ë§Œ ì„œë²„ DBì— ì—…ë¡œë“œ
+        â”‚  â”œâ”€account_raw_data           # ìƒëŒ€ê°•ë„ ê³„ì‚°ë„ ë¡œì»¬ DBì—ì„œ ìˆ˜í–‰ í›„ ì„œë²„ DB ì—…ë¡œë“œ
+        â”‚  â”œâ”€company_list           # company_list ìì²´ë„ ì£¼ê¸°ì ìœ¼ë¡œ ì—…ë°ì´íŠ¸ í•´ì¤˜ì•¼ í•¨
+        â”‚  â”œâ”€date
+        â”‚  â””â”€_server_DB_connection
+        â”œâ”€src_data
+        â”‚  â”œâ”€balance_sheet
+        â”‚  â”œâ”€cash_flow
+        â”‚  â”œâ”€financials
+        â”‚  â”œâ”€giants_pick
+        â”‚  â”œâ”€indicators
+        â”‚  â”œâ”€quarterly_balance_sheet
+        â”‚  â”œâ”€quarterly_cash_flow
+        â”‚  â”œâ”€quarterly_financials
+        â”‚  â”œâ”€stock_data
+        â”‚  â”œâ”€ticker_list
+        â”‚  â””â”€todays_picks
+        â”œâ”€stock_data_downloader     # yfinance ë²„ì „. pykrx ë° dart ë²„ì „ìœ¼ë¡œ ë§Œë“¤ì–´ì•¼ í•¨.
+        â”‚  â”‚  main.py               # ë¡œì»¬ DBì—ì„œ ìƒëŒ€ê°•ë„ ê³„ì‚°, ê±°ì¥ ì„ ì •ì„ ìœ„í•´ í•„ìš”í•œ ë°ì´í„°ì„.
+        â”‚  â”œâ”€config
+        â”‚  â”‚      settings.json
+        â”‚  â””â”€src
+        â”‚      â”‚  constants.py
+        â”‚      â”‚  data_downloader.py
+        â”‚      â”‚  data_processor.py
+        â”‚      â”‚  data_saver.py
+        â”‚      â”‚  __init__.py
+        â”œâ”€supabase
+        â”‚  â””â”€data_migration
+        â””â”€todays_pick_generator
         
+
+
+
+
+
+
+
+â”œâ”€indicator_generator
+â”‚  â”‚  __init__.py
+â”‚  â”‚  main.py
+â”‚  â”‚  calc_giants_strategies.py
+â”‚  â”‚  calculator_indicator.py
+â”‚  â”‚  calculator_rs.py
+â”‚  â”‚  data_loader.py
+â”‚  â”‚  gen_giants_picks.py
+â”‚  â”‚  gen_indicator.py
+â”‚  
+â”œâ”€src_data
+â”‚  â”‚  errors.log
+â”‚  â”‚  
+â”‚  â”œâ”€balance_sheet
+â”‚  â”‚      035420.KS_balance_sheet.feather
+â”‚  â”‚      
+â”‚  â”œâ”€cash_flow
+â”‚  â”‚      035420.KS_cash_flow.feather
+â”‚  â”‚      
+â”‚  â”œâ”€financials
+â”‚  â”‚      035420.KS_financials.feather
+â”‚  â”‚      
+â”‚  â”œâ”€giants_pick
+â”‚  â”‚      035420.KS_giants_picks.feather
+â”‚  â”‚      
+â”‚  â”œâ”€indicators
+â”‚  â”‚      035420.KS_indicator.feather
+â”‚  â”‚      
+â”‚  â”œâ”€quarterly_balance_sheet
+â”‚  â”‚      035420.KS_quarterly_balance_sheet.feather
+â”‚  â”‚      
+â”‚  â”œâ”€quarterly_cash_flow
+â”‚  â”‚      035420.KS_quarterly_cash_flow.feather
+â”‚  â”‚      
+â”‚  â”œâ”€quarterly_financials
+â”‚  â”‚      035420.KS_quarterly_financials.feather
+â”‚  â”‚      
+â”‚  â”œâ”€stock_data
+â”‚  â”‚      035420.KS_data.feather
+â”‚  â”‚      
+â”‚  â””â”€ticker_list
+â”‚          tickers.csv
+â”‚          
+â”œâ”€stock_data_downloader
+â”‚  â”‚  main.py
+â”‚  â”‚  
+â”‚  â”œâ”€config
+â”‚  â”‚      settings.json
+â”‚  â”‚      
+â”‚  â””â”€src
+â”‚      â”‚  constants.py
+â”‚      â”‚  data_downloader.py
+â”‚      â”‚  data_processor.py
+â”‚      â”‚  data_saver.py
+â”‚      â”‚  __init__.py
