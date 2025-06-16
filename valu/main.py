@@ -8,7 +8,7 @@ app = FastAPI()
 ################################################################################################
 
 ################################################################
-# post 요청 예제
+# post 요청 예제t
 from pydantic import BaseModel
 class Giant_request(BaseModel):
     cp_list : list[str]
