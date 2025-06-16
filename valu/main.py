@@ -1,16 +1,13 @@
 from fastapi import FastAPI
+from 정우님 작업한 폴더 import cal_indicator
+
 app = FastAPI()
 
 ################################################################################################
 ##############################          /api/          #########################################
 ################################################################################################
 
-# get 요청 예제
-from fastapi.responses import JSONResponse
-@app.get("/api/cp_list")
-def get_cp_list():
-    return JSONResponse(content={'cp_list': 'json'})
-
+################################################################
 # post 요청 예제
 from pydantic import BaseModel
 class Giant_request(BaseModel):
@@ -23,18 +20,32 @@ class Giant_request(BaseModel):
     end_volume : int
     start_market_cap : int
     # 유저한테 받아올 정보 마음대로 넣기
+
+
+
+################################################################
+# get 요청 예제
+from fastapi.responses import JSONResponse
+@app.get("/api/cp_list")
+def 마음대로_get():
+    temp = cal_indicator(변수 어쩌고)
+    return JSONResponse(content={'cp_list': temp})
+
+
     
+################################################################
 @app.post("/api/giant_request_recommend")
 def post_giant_request_recommend(request: Giant_request):
     print(request.cp_list)
     return JSONResponse(content={'cp_list': 'json'})
 
+################################################################
 # path parameter 요청 예제
 @app.get("/api/path_example/{item_id}")
 def get_path_example(item_id: int):
     return JSONResponse(content={'item_id': item_id})
 
-
+################################################################
 # query parameter 요청 예제
 @app.get("/api/query_example")
 def get_query_example(keyword: str = None, page: int = 1, limit: int = 10):
